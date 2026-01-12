@@ -1,5 +1,27 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1768220709075,
+      "tag": "0000_real_the_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1768220821754,
+      "tag": "0001_bumpy_rachel_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768220943169,
+      "tag": "0002_overjoyed_susan_delgado",
+      "breakpoints": true
+    }
+  ]
 }

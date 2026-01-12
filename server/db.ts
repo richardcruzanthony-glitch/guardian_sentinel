@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, manufacturingQuotes, learningMetrics, agentLogs, compliancePackages } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,145 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Guardian Sentinel specific queries
+
+export async function saveManufacturingQuote(quote: typeof manufacturingQuotes.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save quote: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(manufacturingQuotes).values(quote);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to save quote:", error);
+    throw error;
+  }
+}
+
+export async function getManufacturingQuotes(userId: number, limit: number = 10) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get quotes: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db
+      .select()
+      .from(manufacturingQuotes)
+      .where(eq(manufacturingQuotes.userId, userId))
+      .limit(limit);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get quotes:", error);
+    return [];
+  }
+}
+
+export async function saveLearningMetric(metric: typeof learningMetrics.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save metric: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(learningMetrics).values(metric);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to save metric:", error);
+    throw error;
+  }
+}
+
+export async function getLearningMetrics(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get metrics: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db
+      .select()
+      .from(learningMetrics)
+      .where(eq(learningMetrics.userId, userId));
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get metrics:", error);
+    return [];
+  }
+}
+
+export async function saveAgentLog(log: typeof agentLogs.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save agent log: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(agentLogs).values(log);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to save agent log:", error);
+    throw error;
+  }
+}
+
+export async function getAgentLogs(quoteId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get agent logs: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db
+      .select()
+      .from(agentLogs)
+      .where(eq(agentLogs.quoteId, quoteId));
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get agent logs:", error);
+    return [];
+  }
+}
+
+export async function saveCompliancePackage(pkg: typeof compliancePackages.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save compliance package: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(compliancePackages).values(pkg);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to save compliance package:", error);
+    throw error;
+  }
+}
+
+export async function getCompliancePackages(quoteId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get compliance packages: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db
+      .select()
+      .from(compliancePackages)
+      .where(eq(compliancePackages.quoteId, quoteId));
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get compliance packages:", error);
+    return [];
+  }
+}
