@@ -82,3 +82,11 @@
 
 ## Completed Items
 (Items will be marked as [x] as they are completed)
+
+## Kill Chain / Defense Domain
+- [x] Design kill chain domain agents (ISR, Targeting, Weapons, EW, Cyber, C2, Legal, BDA, Logistics, Reflection)
+- [x] Implement kill chain agents in agents.ts with defense-specific LLM prompts
+- [x] Add domain selector to frontend (Manufacturing vs Defense)
+- [x] Update UI to show defense-specific terminology and results
+- [x] Run live performance test on kill chain scenario (12.11s, 10 agents, 6.8x speed)
+- [x] Update vitest tests for defense domain agents (10 tests passing)

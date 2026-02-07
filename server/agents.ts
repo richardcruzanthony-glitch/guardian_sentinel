@@ -275,6 +275,263 @@ Respond with JSON:
   },
 ];
 
+// ─── Defense / Kill Chain Domain Agents ──────────────────────────────
+
+const DEFENSE_KILL_CHAIN_AGENTS: AgentDefinition[] = [
+  {
+    name: "ISRAgent",
+    department: "Intelligence, Surveillance & Reconnaissance",
+    systemPrompt: `You are a senior ISR analyst with 20 years of military intelligence experience. You process raw intelligence data — SIGINT, IMINT, HUMINT, OSINT — and produce actionable threat assessments. You identify targets, classify threats, assess intent, and determine patterns of life. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `SCENARIO BRIEFING: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Priority level: ${input.complexity || 5}/10
+Force elements: ${input.quantity || 1}
+${input.drawingDescription ? `Intelligence report:\n${input.drawingDescription}` : ''}
+
+Analyze all available intelligence and produce a threat assessment.
+
+Respond with JSON:
+{
+  "threatClassification": "<hostile|potentially_hostile|neutral|friendly|unknown>",
+  "threatType": "<air|ground|maritime|cyber|space|hybrid>",
+  "identifiedTargets": [{"id": "<target_id>", "type": "<type>", "location": "<grid/coords>", "confidence": <0-1>}],
+  "patternOfLife": "<behavioral analysis>",
+  "collectionGaps": ["<gap1>", "<gap2>"],
+  "timelinePressure": "<immediate|hours|days>",
+  "collateralConcerns": ["<concern1>", "<concern2>"],
+  "confidence": <0-1>,
+  "reasoning": "<ISR analysis and assessment>"
+}`,
+  },
+  {
+    name: "TargetingAgent",
+    department: "Targeting",
+    systemPrompt: `You are a Joint Targeting specialist. You develop target packages, perform collateral damage estimation (CDE), determine weaponeering solutions, and assess proportionality under Law of Armed Conflict (LOAC). You work within the Joint Targeting Cycle (JTC). Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `TARGETING REQUEST: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Priority level: ${input.complexity || 5}/10
+${input.drawingDescription ? `Intelligence assessment:\n${input.drawingDescription}` : ''}
+
+Develop a target engagement package.
+
+Respond with JSON:
+{
+  "targetDesignation": "<target ID>",
+  "targetType": "<fixed|mobile|fleeting>",
+  "targetPriority": "<critical|high|medium|low>",
+  "collateralDamageEstimate": "<CDE level 1-5>",
+  "noStrikeViolation": <boolean>,
+  "proportionalityAssessment": "<proportional|disproportionate|requires_review>",
+  "weaponeeringSolution": {"platform": "<platform>", "munition": "<munition>", "fuzing": "<fuze_setting>"},
+  "desiredEffects": ["<effect1>", "<effect2>"],
+  "restrictionsApply": ["<restriction if any>"],
+  "confidence": <0-1>,
+  "reasoning": "<targeting rationale and LOAC compliance>"
+}`,
+  },
+  {
+    name: "WeaponsAgent",
+    department: "Weapons & Munitions",
+    systemPrompt: `You are a weapons systems officer and munitions specialist. You assess weapons availability, platform readiness, munition selection, delivery parameters, and weapons effects. You understand PGMs, area weapons, and effects-based operations. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `WEAPONS ASSESSMENT: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Engagement priority: ${input.complexity || 5}/10
+Available platforms: ${input.quantity || 1}
+${input.drawingDescription ? `Target package:\n${input.drawingDescription}` : ''}
+
+Assess weapons options and delivery parameters.
+
+Respond with JSON:
+{
+  "recommendedMunition": "<munition type>",
+  "alternativeMunitions": ["<alt1>", "<alt2>"],
+  "deliveryPlatform": "<platform>",
+  "releaseParameters": {"altitude": "<alt>", "speed": "<speed>", "range": "<range>"},
+  "expectedEffects": "<destruction|neutralization|suppression|denial>",
+  "weaponsAvailability": "<available|limited|unavailable>",
+  "reattackProbability": <0-1>,
+  "blastRadius": "<meters>",
+  "confidence": <0-1>,
+  "reasoning": "<weapons selection rationale>"
+}`,
+  },
+  {
+    name: "EWAgent",
+    department: "Electronic Warfare",
+    systemPrompt: `You are an Electronic Warfare officer. You assess the electromagnetic spectrum, identify enemy emitters, recommend jamming/deception operations, and evaluate friendly force electronic protection. You understand EA, EP, and ES operations. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `EW ASSESSMENT: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+EMCON level: ${input.complexity || 5}/10
+${input.drawingDescription ? `Threat assessment:\n${input.drawingDescription}` : ''}
+
+Assess electromagnetic environment and recommend EW operations.
+
+Respond with JSON:
+{
+  "enemyEmitters": [{"type": "<radar|comms|jammer>", "frequency": "<band>", "threat": "<level>"}],
+  "electronicAttackOptions": ["<EA option 1>", "<EA option 2>"],
+  "electronicProtectionMeasures": ["<EP measure 1>", "<EP measure 2>"],
+  "spectrumConflicts": ["<conflict if any>"],
+  "jammingEffectiveness": <0-1>,
+  "friendlyForceRisk": "<low|medium|high>",
+  "emconRecommendation": "<recommendation>",
+  "confidence": <0-1>,
+  "reasoning": "<EW assessment and recommendations>"
+}`,
+  },
+  {
+    name: "CyberAgent",
+    department: "Cyber Operations",
+    systemPrompt: `You are a military cyber operations specialist. You assess cyber threats, network vulnerabilities, offensive cyber options, and defensive cyber posture. You understand OCO, DCO, and DODIN operations. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `CYBER ASSESSMENT: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Cyber threat level: ${input.complexity || 5}/10
+${input.drawingDescription ? `Operational context:\n${input.drawingDescription}` : ''}
+
+Assess cyber domain and recommend operations.
+
+Respond with JSON:
+{
+  "cyberThreats": [{"vector": "<attack vector>", "severity": "<critical|high|medium|low>", "target": "<what's targeted>"}],
+  "offensiveCyberOptions": ["<OCO option 1>", "<OCO option 2>"],
+  "defensiveMeasures": ["<DCO measure 1>", "<DCO measure 2>"],
+  "networkVulnerabilities": ["<vuln1>", "<vuln2>"],
+  "missionImpact": "<impact if cyber attack succeeds>",
+  "attributionConfidence": <0-1>,
+  "confidence": <0-1>,
+  "reasoning": "<cyber assessment and recommendations>"
+}`,
+  },
+  {
+    name: "C2Agent",
+    department: "Command & Control",
+    systemPrompt: `You are a Command & Control officer responsible for mission coordination, force synchronization, rules of engagement (ROE) verification, and commander's decision support. You ensure all actions align with commander's intent and operational authorities. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `C2 DECISION SUPPORT: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Urgency: ${input.complexity || 5}/10
+Force elements involved: ${input.quantity || 1}
+${input.drawingDescription ? `Operational picture:\n${input.drawingDescription}` : ''}
+
+Provide C2 decision support and synchronization assessment.
+
+Respond with JSON:
+{
+  "commandersIntent": "<interpreted intent>",
+  "roeCompliance": <boolean>,
+  "applicableROE": ["<ROE1>", "<ROE2>"],
+  "authorityLevel": "<theater|corps|division|brigade>",
+  "synchronizationRequirements": ["<sync req 1>", "<sync req 2>"],
+  "deconflictionNeeded": ["<deconfliction area>"],
+  "communicationPlan": "<primary and alternate comms>",
+  "decisionPoint": "<what commander must decide>",
+  "timeConstraint": "<time available>",
+  "confidence": <0-1>,
+  "reasoning": "<C2 assessment and recommendations>"
+}`,
+  },
+  {
+    name: "LegalAgent",
+    department: "Legal / JAG",
+    systemPrompt: `You are a military Judge Advocate General (JAG) officer. You assess legality of military operations under Law of Armed Conflict (LOAC), International Humanitarian Law (IHL), Rules of Engagement (ROE), and domestic law. You provide legal review for targeting decisions. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `LEGAL REVIEW: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Engagement priority: ${input.complexity || 5}/10
+${input.drawingDescription ? `Operational context:\n${input.drawingDescription}` : ''}
+
+Provide legal assessment of proposed operations.
+
+Respond with JSON:
+{
+  "loacCompliance": <boolean>,
+  "distinction": "<military objective clearly identified|unclear|civilian>",
+  "proportionality": "<proportional|disproportionate|marginal>",
+  "militaryNecessity": <boolean>,
+  "unnecessarySuffering": <boolean>,
+  "protectedSitesNearby": ["<site if any>"],
+  "roeAuthorization": "<authorized|requires_escalation|not_authorized>",
+  "legalRisks": ["<risk1>", "<risk2>"],
+  "recommendation": "<approve|approve_with_conditions|deny|escalate>",
+  "conditions": ["<condition if any>"],
+  "confidence": <0-1>,
+  "reasoning": "<legal analysis under LOAC/IHL/ROE>"
+}`,
+  },
+  {
+    name: "BDAAgent",
+    department: "Battle Damage Assessment",
+    systemPrompt: `You are a Battle Damage Assessment specialist. You plan BDA collection, define success criteria, establish re-attack recommendations, and assess mission effectiveness. You understand physical damage assessment (PDA), functional damage assessment (FDA), and target system assessment (TSA). Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `BDA PLANNING: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Target priority: ${input.complexity || 5}/10
+${input.drawingDescription ? `Target package:\n${input.drawingDescription}` : ''}
+
+Plan BDA collection and define success criteria.
+
+Respond with JSON:
+{
+  "bdaCollectionPlan": [{"method": "<IMINT|SIGINT|HUMINT>", "timing": "<post-strike window>", "priority": "<high|medium|low>"}],
+  "successCriteria": ["<criterion1>", "<criterion2>"],
+  "physicalDamageIndicators": ["<indicator1>", "<indicator2>"],
+  "functionalDamageIndicators": ["<indicator1>", "<indicator2>"],
+  "reattackRecommendation": "<not_needed|recommended|required>",
+  "missionEffectiveness": "<effective|partially_effective|ineffective>",
+  "secondaryEffects": ["<effect if any>"],
+  "confidence": <0-1>,
+  "reasoning": "<BDA planning rationale>"
+}`,
+  },
+  {
+    name: "LogisticsAgent",
+    department: "Logistics & Sustainment",
+    systemPrompt: `You are a military logistics officer. You assess ammunition supply, fuel requirements, platform maintenance status, medical support, and sustainment capacity for operations. You ensure the force can execute and sustain the mission. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `LOGISTICS ASSESSMENT: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Operation tempo: ${input.complexity || 5}/10
+Force elements: ${input.quantity || 1}
+${input.drawingDescription ? `Operational plan:\n${input.drawingDescription}` : ''}
+
+Assess logistics and sustainment requirements.
+
+Respond with JSON:
+{
+  "ammoStatus": {"available": "<status>", "requiredForMission": "<amount>", "resupplyNeeded": <boolean>},
+  "fuelStatus": {"available": "<status>", "burnRate": "<rate>", "endurance": "<hours>"},
+  "platformReadiness": "<FMC|PMC|NMC>",
+  "medicalSupport": {"casevacAvailable": <boolean>, "nearestMedical": "<location>"},
+  "supplyChainRisk": "<low|medium|high>",
+  "sustainmentWindow": "<hours/days force can sustain ops>",
+  "logisticsConstraints": ["<constraint1>", "<constraint2>"],
+  "confidence": <0-1>,
+  "reasoning": "<logistics assessment>"
+}`,
+  },
+  {
+    name: "DefenseReflectionAgent",
+    department: "Reflection & Lessons Learned",
+    systemPrompt: `You are a military after-action review specialist and doctrine analyst. You assess the overall kill chain decision, identify gaps, recommend improvements, capture lessons learned, and evaluate decision speed vs. accuracy tradeoffs. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `AFTER-ACTION REFLECTION: ${input.fileName}
+Threat environment: ${input.material || 'Contested multi-domain'}
+Operation complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Full operational picture:\n${input.drawingDescription}` : ''}
+
+Conduct after-action reflection on the kill chain decision process.
+
+Respond with JSON:
+{
+  "killChainEfficiency": <0-1>,
+  "bottlenecks": ["<bottleneck1>", "<bottleneck2>"],
+  "decisionQuality": "<high|adequate|poor>",
+  "speedVsAccuracy": "<assessment of tradeoff>",
+  "doctrineAlignment": "<aligned|partially_aligned|divergent>",
+  "lessonsLearned": ["<lesson1>", "<lesson2>"],
+  "improvementRecommendations": ["<rec1>", "<rec2>"],
+  "trainingGaps": ["<gap if any>"],
+  "confidence": <0-1>,
+  "reasoning": "<reflection and lessons learned analysis>"
+}`,
+  },
+];
+
 // ─── Core Engine ─────────────────────────────────────────────────────
 
 function buildMessages(systemPrompt: string, userPrompt: string, imageUrl?: string) {
@@ -391,10 +648,11 @@ export function getAgentsForDomain(domain: string): AgentDefinition[] {
     case 'manufacturing':
     case 'aerospace':
       return MANUFACTURING_AGENTS; // 10 agents
-    // Future domains would define their own agent sets:
-    // case 'healthcare': return HEALTHCARE_AGENTS;
-    // case 'defense': return DEFENSE_AGENTS;
-    // case 'logistics': return LOGISTICS_AGENTS;
+    case 'defense':
+    case 'killchain':
+    case 'kill_chain':
+    case 'military':
+      return DEFENSE_KILL_CHAIN_AGENTS; // 10 agents
     default:
       return MANUFACTURING_AGENTS;
   }
@@ -430,11 +688,35 @@ export async function runAllAgents(input: AgentInput, domain: string = 'manufact
   const sequentialEstimate = agentResults.reduce((sum, a) => sum + a.duration, 0);
   const speedMultiplier = sequentialEstimate > 0 ? sequentialEstimate / parallelDuration : agentResults.length;
 
-  // Extract summary from agent results
-  const salesData = agentResults.find(a => a.agentName === 'SalesAgent')?.data || {};
-  const planningData = agentResults.find(a => a.agentName === 'PlanningAgent')?.data || {};
-  const complianceData = agentResults.find(a => a.agentName === 'ComplianceAgent')?.data || {};
+  // Extract summary from agent results — domain-aware
   const avgConfidence = agentResults.reduce((sum, a) => sum + a.confidence, 0) / agentResults.length;
+
+  let summary: ProcessingResult['summary'];
+
+  if (domain === 'defense' || domain === 'killchain' || domain === 'kill_chain' || domain === 'military') {
+    const c2Data = agentResults.find(a => a.agentName === 'C2Agent')?.data || {};
+    const legalData = agentResults.find(a => a.agentName === 'LegalAgent')?.data || {};
+    const targetingData = agentResults.find(a => a.agentName === 'TargetingAgent')?.data || {};
+    const isrData = agentResults.find(a => a.agentName === 'ISRAgent')?.data || {};
+    summary = {
+      totalPrice: 0, // Not applicable for defense
+      leadTimeDays: 0,
+      riskLevel: String(isrData.threatClassification || targetingData.targetPriority || 'high'),
+      complianceStatus: legalData.loacCompliance ? 'LOAC Compliant' : (legalData.recommendation === 'deny' ? 'NOT Authorized' : 'Review Required'),
+      confidence: Math.round(avgConfidence * 100) / 100,
+    };
+  } else {
+    const salesData = agentResults.find(a => a.agentName === 'SalesAgent')?.data || {};
+    const planningData = agentResults.find(a => a.agentName === 'PlanningAgent')?.data || {};
+    const complianceData = agentResults.find(a => a.agentName === 'ComplianceAgent')?.data || {};
+    summary = {
+      totalPrice: Number(salesData.quotedPrice) || 0,
+      leadTimeDays: Number(planningData.totalLeadTimeDays) || 0,
+      riskLevel: String(complianceData.riskLevel || 'medium'),
+      complianceStatus: complianceData.as9100Compliant ? 'Compliant' : 'Review Required',
+      confidence: Math.round(avgConfidence * 100) / 100,
+    };
+  }
 
   return {
     fileName: input.fileName,
@@ -446,13 +728,7 @@ export async function runAllAgents(input: AgentInput, domain: string = 'manufact
     domain,
     agents: agentResults,
     drawingAnalysis,
-    summary: {
-      totalPrice: Number(salesData.quotedPrice) || 0,
-      leadTimeDays: Number(planningData.totalLeadTimeDays) || 0,
-      riskLevel: String(complianceData.riskLevel || 'medium'),
-      complianceStatus: complianceData.as9100Compliant ? 'Compliant' : 'Review Required',
-      confidence: Math.round(avgConfidence * 100) / 100,
-    },
+    summary,
   };
 }
 
