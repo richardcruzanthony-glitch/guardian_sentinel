@@ -1,66 +1,126 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Zap, Shield, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight } from "lucide-react";
 import { getLoginUrl } from "@/const";
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { AgentVisualization } from "@/components/AgentVisualization";
-import { Loader2 } from "lucide-react";
+import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualization";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [complexity, setComplexity] = useState(5);
   const [quantity, setQuantity] = useState(1);
+  const [material, setMaterial] = useState('Aluminum 6061-T6');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingResult, setProcessingResult] = useState<any>(null);
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [processingStage, setProcessingStage] = useState<string>('');
 
-  const demoMutation = trpc.demo.processRequest.useMutation();
+  const uploadMutation = trpc.guardian.uploadDrawing.useMutation();
+  const processMutation = trpc.guardian.processRequest.useMutation();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      setProcessingResult(null);
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      } else {
+        setPreviewUrl(null);
+      }
     }
-  };
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.currentTarget.classList.add('border-accent', 'bg-accent/10');
-  };
+  }, []);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.currentTarget.classList.remove('border-accent', 'bg-accent/10');
-  };
+  }, []);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.currentTarget.classList.remove('border-accent', 'bg-accent/10');
     const file = e.dataTransfer.files?.[0];
     if (file) {
       setSelectedFile(file);
+      setProcessingResult(null);
+      if (file.type.startsWith('image/')) {
+        setPreviewUrl(URL.createObjectURL(file));
+      }
     }
-  };
+  }, []);
 
   const handleProcess = async () => {
     if (!selectedFile) return;
 
     setIsProcessing(true);
+    setProcessingResult(null);
+    setProcessingStage('Uploading drawing...');
+
     try {
-      const result = await demoMutation.mutateAsync({
+      // Step 1: Upload the file to S3
+      let imageUrl: string | undefined;
+      if (selectedFile.type.startsWith('image/')) {
+        setProcessingStage('Uploading engineering drawing to cloud...');
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]); // Remove data:image/...;base64, prefix
+          };
+          reader.readAsDataURL(selectedFile);
+        });
+
+        const uploadResult = await uploadMutation.mutateAsync({
+          fileName: selectedFile.name,
+          fileData: base64,
+          contentType: selectedFile.type,
+        });
+        imageUrl = uploadResult.url;
+      }
+
+      // Step 2: Fire all agents in parallel
+      setProcessingStage('Firing all domain agents in parallel...');
+      const result = await processMutation.mutateAsync({
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         complexity,
         quantity,
+        material,
+        imageUrl,
+        domain: 'manufacturing',
       });
+
       setProcessingResult(result.result);
+      setProcessingStage('');
     } catch (error) {
       console.error('Processing error:', error);
+      setProcessingStage('Error occurred during processing');
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // Build agent statuses for visualization
+  const agentStatuses: AgentStatus[] = useMemo(() => {
+    if (!processingResult) return [];
+    return processingResult.agents.map((a: any) => ({
+      name: a.agentName,
+      department: a.department,
+      status: a.status,
+      duration: a.duration,
+      confidence: a.confidence,
+    }));
+  }, [processingResult]);
 
   if (loading) {
     return (
@@ -80,8 +140,8 @@ export default function Home() {
               <Zap className="w-6 h-6 text-accent-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Guardian Sentinel</h1>
-              <p className="text-xs text-muted-foreground">Manufacturing Business OS</p>
+              <h1 className="text-xl font-bold text-foreground">Guardian OS</h1>
+              <p className="text-xs text-muted-foreground">Parallel Decision Architecture</p>
             </div>
           </div>
           
@@ -102,100 +162,138 @@ export default function Home() {
       <main className="container py-8 space-y-8">
         {/* Hero Section */}
         <section className="space-y-4">
-          <div className="space-y-2">
-            <h2 className="text-4xl font-bold text-foreground cyber-glow">
-              AI-Powered Manufacturing Analysis
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/30 bg-accent/5 text-xs text-accent font-medium">
+              <Activity className="w-3 h-3" />
+              Dynamic Domain-Driven Decision Engine
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground cyber-glow leading-tight">
+              Every Department.<br />
+              <span className="text-accent">Simultaneously.</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl">
-              Upload your CAD files and get instant manufacturing quotes, schedules, cost analysis, and optimization recommendations in 22 seconds.
+              Upload an engineering drawing. Guardian fires Sales, Engineering, Quality, Planning, 
+              Procurement, Manufacturing, Shipping, Compliance, Audit, and Reflection agents 
+              <strong className="text-foreground"> all at once</strong> — not one after another.
             </p>
           </div>
+
+          {/* Architecture comparison */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
+            <div className="p-4 rounded-lg border border-border bg-card/30">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Traditional Process</p>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+                {['Sales', 'Eng', 'Quality', 'Plan', 'Procure', 'Mfg', 'Ship', 'Comply', 'Audit'].map((dept, i) => (
+                  <span key={dept} className="flex items-center gap-1">
+                    <span className="px-1.5 py-0.5 bg-muted rounded text-[10px]">{dept}</span>
+                    {i < 8 && <ArrowRight className="w-3 h-3" />}
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                <Clock className="w-3 h-3 inline mr-1" />
+                2–3 weeks sequential
+              </p>
+            </div>
+            <div className="p-4 rounded-lg border border-accent/30 bg-accent/5">
+              <p className="text-xs text-accent uppercase tracking-wider mb-2">Guardian OS</p>
+              <div className="flex items-center gap-1 text-xs flex-wrap">
+                {['Sales', 'Eng', 'Quality', 'Plan', 'Procure', 'Mfg', 'Ship', 'Comply', 'Audit', 'Reflect'].map((dept) => (
+                  <span key={dept} className="px-1.5 py-0.5 bg-accent/20 rounded text-[10px] text-accent border border-accent/30">
+                    {dept}
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm text-accent mt-2 font-semibold">
+                <Zap className="w-3 h-3 inline mr-1" />
+                All parallel — seconds
+              </p>
+            </div>
+          </div>
         </section>
-
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-border bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <Zap className="w-6 h-6 text-accent mb-2" />
-              <CardTitle className="text-lg">22-Second Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                8 parallel agents process your design simultaneously for instant results.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <TrendingUp className="w-6 h-6 text-accent mb-2" />
-              <CardTitle className="text-lg">Self-Learning</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                System improves accuracy with every quote, reaching 85%+ precision.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <Shield className="w-6 h-6 text-accent mb-2" />
-              <CardTitle className="text-lg">AS9100 Compliant</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Aerospace & defense manufacturing standards built-in.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Upload Section */}
         <Card className="border-border bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Upload CAD File</CardTitle>
-            <CardDescription>Drag and drop or click to select a STEP file</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <FileImage className="w-5 h-5 text-accent" />
+              Upload Engineering Drawing
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* File Upload Area */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer transition-all hover:border-accent hover:bg-accent/5"
-            >
-              <input
-                type="file"
-                accept=".stp,.step,.iges,.igs,.dwg"
-                onChange={handleFileSelect}
-                className="hidden"
-                id="file-input"
-              />
-              <label htmlFor="file-input" className="cursor-pointer">
-                <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-lg font-semibold text-foreground mb-1">
-                  {selectedFile ? selectedFile.name : 'Drop your CAD file here'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Supports STEP, IGES, DWG formats
-                </p>
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer transition-all hover:border-accent hover:bg-accent/5"
+              >
+                <input
+                  type="file"
+                  accept="image/*,.stp,.step,.iges,.igs,.dwg,.pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="file-input"
+                />
+                <label htmlFor="file-input" className="cursor-pointer">
+                  <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-base font-semibold text-foreground mb-1">
+                    {selectedFile ? selectedFile.name : 'Drop your drawing here'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Images (JPG, PNG), STEP, IGES, DWG, PDF
+                  </p>
+                </label>
+              </div>
+
+              {/* Preview */}
+              {previewUrl ? (
+                <div className="border border-border rounded-lg overflow-hidden bg-white">
+                  <img
+                    src={previewUrl}
+                    alt="Engineering drawing preview"
+                    className="w-full h-full object-contain max-h-64"
+                  />
+                </div>
+              ) : (
+                <div className="border border-border rounded-lg p-6 flex items-center justify-center bg-card/30">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Drawing preview will appear here
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Parameters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Design Complexity</label>
+                <label className="text-sm font-semibold text-foreground">Material</label>
+                <select
+                  value={material}
+                  onChange={(e) => setMaterial(e.target.value)}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                >
+                  <option value="Aluminum 6061-T6">Aluminum 6061-T6</option>
+                  <option value="Aluminum 7075-T6">Aluminum 7075-T6</option>
+                  <option value="Titanium Ti-6Al-4V">Titanium Ti-6Al-4V</option>
+                  <option value="Stainless Steel 304">Stainless Steel 304</option>
+                  <option value="Stainless Steel 316">Stainless Steel 316</option>
+                  <option value="Inconel 718">Inconel 718</option>
+                  <option value="Carbon Steel 1018">Carbon Steel 1018</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Complexity ({complexity}/10)</label>
                 <input
                   type="range"
                   min="1"
                   max="10"
                   value={complexity}
                   onChange={(e) => setComplexity(Number(e.target.value))}
-                  className="w-full"
+                  className="w-full accent-accent"
                 />
-                <p className="text-xs text-muted-foreground">Current: {complexity}/10</p>
               </div>
 
               <div className="space-y-2">
@@ -205,7 +303,7 @@ export default function Home() {
                   min="1"
                   value={quantity}
                   onChange={(e) => setQuantity(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
                 />
               </div>
             </div>
@@ -214,18 +312,18 @@ export default function Home() {
             <Button
               onClick={handleProcess}
               disabled={!selectedFile || isProcessing}
-              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
               size="lg"
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
+                  {processingStage || 'Processing...'}
                 </>
               ) : (
                 <>
                   <Zap className="w-4 h-4 mr-2" />
-                  Analyze Design
+                  Fire All Agents — Analyze Drawing
                 </>
               )}
             </Button>
@@ -235,134 +333,146 @@ export default function Home() {
         {/* Processing Results */}
         {processingResult && (
           <div className="space-y-6">
+            {/* Speed Comparison Hero */}
+            <div className="p-6 rounded-lg border border-accent/30 bg-accent/5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Agents Fired</p>
+                  <p className="text-3xl font-bold text-accent">{processingResult.agentCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Parallel Time</p>
+                  <p className="text-3xl font-bold text-accent">{(processingResult.totalDuration / 1000).toFixed(1)}s</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Sequential Would Take</p>
+                  <p className="text-3xl font-bold text-muted-foreground line-through">{(processingResult.sequentialEstimate / 1000).toFixed(1)}s</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Speed Multiplier</p>
+                  <p className="text-3xl font-bold" style={{ color: '#00FF41' }}>{processingResult.speedMultiplier}x</p>
+                </div>
+              </div>
+            </div>
+
             {/* Agent Visualization */}
             <Card className="border-border bg-card/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Processing Status</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-accent" />
+                  Parallel Agent Execution
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <AgentVisualization
-                  agents={processingResult.agents.map((a: any) => ({
-                    name: a.agentName,
-                    status: a.status,
-                    duration: a.duration,
-                    confidence: a.confidence,
-                  }))}
+                  agents={agentStatuses}
                   totalDuration={processingResult.totalDuration}
+                  sequentialEstimate={processingResult.sequentialEstimate}
+                  speedMultiplier={processingResult.speedMultiplier}
+                  agentCount={processingResult.agentCount}
                 />
               </CardContent>
             </Card>
 
-            {/* Quote Results */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Drawing Analysis */}
+            {processingResult.drawingAnalysis && (
               <Card className="border-border bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle>Quote Summary</CardTitle>
+                  <CardTitle>Drawing Analysis</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total Price</span>
-                    <span className="text-2xl font-bold text-accent">${processingResult.quote.totalPrice.toFixed(2)}</span>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Material</span>
-                      <span>${processingResult.quote.materialCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Labor</span>
-                      <span>${processingResult.quote.laborCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Overhead</span>
-                      <span>${processingResult.quote.overheadCost.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <div className="pt-3 border-t border-border">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Confidence</span>
-                      <span className="text-lg font-bold text-accent">{(processingResult.quote.confidence * 100).toFixed(0)}%</span>
-                    </div>
-                  </div>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                    {processingResult.drawingAnalysis}
+                  </p>
                 </CardContent>
               </Card>
+            )}
 
-              <Card className="border-border bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle>Schedule</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Estimated Duration</p>
-                    <p className="text-2xl font-bold text-accent">{processingResult.schedule.estimatedDays} days</p>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Start: </span>
-                      <span>{processingResult.schedule.startDate}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">End: </span>
-                      <span>{processingResult.schedule.endDate}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-lg border border-border bg-card/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Quoted Price</p>
+                <p className="text-2xl font-bold text-accent">
+                  ${processingResult.summary.totalPrice ? processingResult.summary.totalPrice.toLocaleString() : '—'}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg border border-border bg-card/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Lead Time</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {processingResult.summary.leadTimeDays || '—'} days
+                </p>
+              </div>
+              <div className="p-4 rounded-lg border border-border bg-card/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Risk Level</p>
+                <p className={`text-2xl font-bold ${
+                  processingResult.summary.riskLevel === 'low' ? 'text-green-400' :
+                  processingResult.summary.riskLevel === 'high' ? 'text-red-400' : 'text-yellow-400'
+                }`}>
+                  {processingResult.summary.riskLevel || '—'}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg border border-border bg-card/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Compliance</p>
+                <p className={`text-2xl font-bold ${
+                  processingResult.summary.complianceStatus === 'Compliant' ? 'text-green-400' : 'text-yellow-400'
+                }`}>
+                  {processingResult.summary.complianceStatus || '—'}
+                </p>
+              </div>
             </div>
 
-            {/* Cost Breakdown */}
+            {/* Individual Agent Results — Expandable */}
             <Card className="border-border bg-card/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Detailed Cost Analysis</CardTitle>
+                <CardTitle>Department Reports</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-3 bg-background rounded-lg border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Materials</p>
-                      <p className="text-lg font-bold text-accent">${processingResult.costs.materialCost.toFixed(0)}</p>
-                    </div>
-                    <div className="p-3 bg-background rounded-lg border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Labor</p>
-                      <p className="text-lg font-bold text-accent">${processingResult.costs.laborCost.toFixed(0)}</p>
-                    </div>
-                    <div className="p-3 bg-background rounded-lg border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Tooling</p>
-                      <p className="text-lg font-bold text-accent">${processingResult.costs.toolingCost.toFixed(0)}</p>
-                    </div>
-                    <div className="p-3 bg-background rounded-lg border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Overhead</p>
-                      <p className="text-lg font-bold text-accent">${processingResult.costs.overheadCost.toFixed(0)}</p>
-                    </div>
+              <CardContent className="space-y-2">
+                {processingResult.agents.map((agent: any) => (
+                  <div key={agent.agentName} className="border border-border rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setExpandedAgent(expandedAgent === agent.agentName ? null : agent.agentName)}
+                      className="w-full p-3 flex items-center justify-between text-left hover:bg-card/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${agent.status === 'completed' ? 'bg-green-400' : 'bg-red-400'}`} />
+                        <span className="text-sm font-medium text-foreground">{agent.department}</span>
+                        <span className="text-xs text-muted-foreground">({agent.agentName})</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">{(agent.duration / 1000).toFixed(1)}s</span>
+                        <span className="text-xs text-muted-foreground">{(agent.confidence * 100).toFixed(0)}%</span>
+                        {expandedAgent === agent.agentName ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </button>
+                    {expandedAgent === agent.agentName && (
+                      <div className="p-3 border-t border-border bg-background/50">
+                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-x-auto">
+                          {JSON.stringify(agent.data, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recommendations */}
-            <Card className="border-border bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>Optimization Recommendations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {processingResult.optimizations.suggestions.map((suggestion: string, index: number) => (
-                    <li key={index} className="flex gap-2 text-sm">
-                      <span className="text-accent font-bold">•</span>
-                      <span className="text-foreground">{suggestion}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 p-3 bg-accent/10 border border-accent/30 rounded-lg">
-                  <p className="text-sm text-foreground">
-                    <span className="font-semibold">Potential Savings: </span>
-                    <span className="text-accent font-bold">${processingResult.optimizations.potentialCostSavings.toFixed(0)}</span>
-                  </p>
-                </div>
+                ))}
               </CardContent>
             </Card>
           </div>
         )}
+
+        {/* Footer */}
+        <footer className="border-t border-border pt-6 pb-8">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">
+              Guardian OS — Parallel Decision Architecture
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Every department that touches a decision fires simultaneously.
+            </p>
+          </div>
+        </footer>
       </main>
     </div>
   );

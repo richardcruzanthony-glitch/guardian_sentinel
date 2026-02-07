@@ -1,7 +1,16 @@
 /**
- * Guardian Sentinel 8-Agent Framework
- * Parallel processing system for manufacturing analysis
+ * Guardian OS — Dynamic Domain-Driven Parallel Agent Framework
+ * 
+ * The number of agents is NOT fixed. It depends on the domain.
+ * For manufacturing: Sales, Engineering, Quality, Planning, Procurement,
+ * Manufacturing, Shipping, Compliance, Audit, Reflection & Adjust.
+ * 
+ * Every department that touches a decision fires SIMULTANEOUSLY.
  */
+
+import { invokeLLM } from "./_core/llm";
+
+// ─── Types ───────────────────────────────────────────────────────────
 
 export interface AgentInput {
   fileName: string;
@@ -9,13 +18,16 @@ export interface AgentInput {
   complexity?: number;
   material?: string;
   quantity?: number;
+  imageUrl?: string;
+  drawingDescription?: string;
 }
 
 export interface AgentOutput {
   agentName: string;
+  department: string;
   status: 'completed' | 'failed';
   duration: number;
-  data: Record<string, unknown> | QuoteData | ScheduleData | PlanData | CostData | RiskData | OptimizationData | ComplianceData | LearningData;
+  data: Record<string, unknown>;
   confidence: number;
 }
 
@@ -24,313 +36,311 @@ export interface ProcessingResult {
   fileName: string;
   totalDuration: number;
   processingTime: number;
+  sequentialEstimate: number;
+  speedMultiplier: number;
+  agentCount: number;
+  domain: string;
   agents: AgentOutput[];
-  quote: QuoteData;
-  schedule: ScheduleData;
-  plan: PlanData;
-  costs: CostData;
-  risks: RiskData;
-  optimizations: OptimizationData;
-  compliance: ComplianceData;
-  learning: LearningData;
+  drawingAnalysis: string;
+  summary: {
+    totalPrice: number;
+    leadTimeDays: number;
+    riskLevel: string;
+    complianceStatus: string;
+    confidence: number;
+  };
 }
 
-export interface QuoteData {
-  basePrice: number;
-  materialCost: number;
-  laborCost: number;
-  overheadCost: number;
-  totalPrice: number;
-  confidence: number;
-  breakdown: Record<string, number>;
+// ─── Agent Definition ────────────────────────────────────────────────
+
+interface AgentDefinition {
+  name: string;
+  department: string;
+  systemPrompt: string;
+  userPromptBuilder: (input: AgentInput) => string;
 }
 
-export interface ScheduleData {
-  estimatedDays: number;
-  startDate: string;
-  endDate: string;
-  milestones: Array<{ date: string; description: string }>;
-  confidence: number;
-}
+// ─── Manufacturing Domain Agents ─────────────────────────────────────
 
-export interface PlanData {
-  manufacturingSteps: Array<{ step: number; description: string; duration: number }>;
-  toolsRequired: string[];
-  materialRequirements: Record<string, number>;
-  confidence: number;
-}
+const MANUFACTURING_AGENTS: AgentDefinition[] = [
+  {
+    name: "SalesAgent",
+    department: "Sales",
+    systemPrompt: `You are a senior aerospace sales engineer. Analyze the engineering drawing and determine pricing strategy, customer requirements interpretation, margin targets, and competitive positioning. You understand AS9100 customer expectations. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Analyze this part for sales quoting: "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-export interface CostData {
-  materialCost: number;
-  laborCost: number;
-  overheadCost: number;
-  toolingCost: number;
-  totalCost: number;
-  costPerUnit: number;
-  breakdown: Record<string, number>;
-  confidence: number;
-}
+Respond with JSON:
+{
+  "quotedPrice": <number - final customer price>,
+  "marginPercent": <number - target margin %>,
+  "competitivePosition": "<low|market|premium>",
+  "customerRequirements": ["<req1>", "<req2>"],
+  "deliveryCommitment": "<timeframe>",
+  "paymentTerms": "<terms>",
+  "confidence": <0-1>,
+  "reasoning": "<sales strategy explanation>"
+}`,
+  },
+  {
+    name: "EngineeringAgent",
+    department: "Engineering",
+    systemPrompt: `You are a senior manufacturing engineer specializing in aerospace CNC machining. Analyze the engineering drawing in detail — identify all features, dimensions, tolerances, surface finishes, and design-for-manufacturability concerns. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Perform engineering analysis of "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-export interface RiskData {
-  riskLevel: 'low' | 'medium' | 'high';
-  risks: Array<{ description: string; probability: number; impact: number }>;
-  mitigations: string[];
-  confidence: number;
-}
+Respond with JSON:
+{
+  "features": [{"type": "<hole|slot|pocket|boss|fillet|chamfer>", "dimensions": "<dims>", "tolerance": "<tol>"}],
+  "criticalDimensions": ["<dim1>", "<dim2>"],
+  "surfaceFinish": "<Ra value or spec>",
+  "dfmConcerns": ["<concern1>", "<concern2>"],
+  "materialSpec": "<full material specification>",
+  "heatTreatment": "<if required>",
+  "machiningApproach": "<recommended approach>",
+  "confidence": <0-1>,
+  "reasoning": "<engineering analysis>"
+}`,
+  },
+  {
+    name: "QualityAgent",
+    department: "Quality",
+    systemPrompt: `You are an AS9100 quality engineer. Analyze the engineering drawing and create an inspection plan, identify critical-to-quality characteristics, and define acceptance criteria. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Create quality plan for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-export interface OptimizationData {
-  suggestions: string[];
-  potentialCostSavings: number;
-  potentialTimeSavings: number;
-  confidence: number;
-}
+Respond with JSON:
+{
+  "inspectionPlan": [{"characteristic": "<what>", "method": "<how>", "frequency": "<when>", "acceptance": "<criteria>"}],
+  "ctqCharacteristics": ["<critical dimension 1>", "<critical dimension 2>"],
+  "inspectionTools": ["<tool1>", "<tool2>"],
+  "firstArticleRequired": <boolean>,
+  "materialCertRequired": <boolean>,
+  "specialProcesses": ["<process if any>"],
+  "confidence": <0-1>,
+  "reasoning": "<quality planning rationale>"
+}`,
+  },
+  {
+    name: "PlanningAgent",
+    department: "Planning",
+    systemPrompt: `You are a production planning specialist for aerospace manufacturing. Analyze the part and create a production schedule with capacity planning, lead times, and milestone tracking. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Create production plan for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+Today: ${new Date().toISOString().split('T')[0]}
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-export interface ComplianceData {
-  standard: string;
-  compliant: boolean;
-  requirements: string[];
-  documentation: string[];
-  confidence: number;
-}
+Respond with JSON:
+{
+  "totalLeadTimeDays": <number>,
+  "materialLeadDays": <number>,
+  "machiningDays": <number>,
+  "inspectionDays": <number>,
+  "milestones": [{"day": <n>, "activity": "<what>", "duration": "<hours>"}],
+  "capacityRequired": {"cncHours": <n>, "inspectionHours": <n>, "setupHours": <n>},
+  "startDate": "<YYYY-MM-DD>",
+  "shipDate": "<YYYY-MM-DD>",
+  "confidence": <0-1>,
+  "reasoning": "<planning rationale>"
+}`,
+  },
+  {
+    name: "ProcurementAgent",
+    department: "Procurement",
+    systemPrompt: `You are a procurement specialist for aerospace manufacturing. Analyze the part requirements and identify material sourcing, vendor selection, raw stock specifications, and supply chain considerations. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Procurement analysis for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-export interface LearningData {
-  previousAccuracy: number;
-  currentAccuracy: number;
-  improvement: number;
-  samplesProcessed: number;
-  confidence: number;
-}
+Respond with JSON:
+{
+  "rawMaterial": {"spec": "<material spec>", "form": "<bar|plate|billet>", "size": "<dimensions>", "weight": "<kg>"},
+  "estimatedMaterialCost": <number>,
+  "vendorRecommendations": ["<vendor1>", "<vendor2>"],
+  "leadTime": "<material lead time>",
+  "certifications": ["<cert1>", "<cert2>"],
+  "alternativeMaterials": ["<alt1 if any>"],
+  "supplyChainRisk": "<low|medium|high>",
+  "confidence": <0-1>,
+  "reasoning": "<procurement strategy>"
+}`,
+  },
+  {
+    name: "ManufacturingAgent",
+    department: "Manufacturing",
+    systemPrompt: `You are a CNC machining specialist with 20+ years in aerospace manufacturing. Analyze the engineering drawing and create a detailed manufacturing routing with operations, tooling, fixtures, cycle times, and setup requirements. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Create manufacturing routing for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-/**
- * 1. Quote Agent - Generates pricing quotes
- */
-export async function runQuoteAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
-  try {
-    // Simulate quote calculation
-    const complexity = input.complexity || 5;
-    const quantity = input.quantity || 1;
-    const baseRate = 50; // $ per unit complexity
-    
-    const materialCost = (complexity * 100 + (input.fileSize || 0) * 0.01) * quantity;
-    const laborCost = complexity * baseRate * quantity;
-    const overheadCost = (materialCost + laborCost) * 0.15;
-    const totalPrice = materialCost + laborCost + overheadCost;
-    
-    const data: QuoteData = {
-      basePrice: totalPrice,
-      materialCost,
-      laborCost,
-      overheadCost,
-      totalPrice,
-      confidence: 0.85 + Math.random() * 0.1,
-      breakdown: {
-        materials: materialCost,
-        labor: laborCost,
-        overhead: overheadCost,
-      },
-    };
-    
-    return {
-      agentName: 'QuoteAgent',
-      status: 'completed',
-      duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
-    };
-  } catch (error) {
-    return {
-      agentName: 'QuoteAgent',
-      status: 'failed',
-      duration: Date.now() - startTime,
-      data: { error: String(error) },
-      confidence: 0,
-    };
-  }
-}
+Respond with JSON:
+{
+  "operations": [{"op": <number>, "description": "<operation>", "machine": "<CNC type>", "cycleTimeMin": <minutes>, "setupTimeMin": <minutes>}],
+  "tooling": [{"tool": "<tool>", "size": "<size>", "purpose": "<what for>"}],
+  "fixtures": ["<fixture1>", "<fixture2>"],
+  "totalCycleTimeMin": <number>,
+  "totalSetupTimeMin": <number>,
+  "machineRate": <dollars_per_hour>,
+  "laborCost": <total_labor_dollars>,
+  "confidence": <0-1>,
+  "reasoning": "<manufacturing approach>"
+}`,
+  },
+  {
+    name: "ShippingAgent",
+    department: "Shipping",
+    systemPrompt: `You are a logistics and shipping specialist for aerospace parts. Analyze the part and determine packaging requirements, shipping method, handling precautions, and delivery logistics. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Shipping analysis for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-/**
- * 2. Schedule Agent - Plans manufacturing schedule
- */
-export async function runScheduleAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
-  try {
-    const complexity = input.complexity || 5;
-    const estimatedDays = Math.ceil(complexity * 1.5);
-    const startDate = new Date();
-    const endDate = new Date(startDate.getTime() + estimatedDays * 24 * 60 * 60 * 1000);
-    
-    const milestones = [
-      { date: new Date(startDate.getTime() + estimatedDays * 0.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], description: '25% Complete' },
-      { date: new Date(startDate.getTime() + estimatedDays * 0.5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], description: '50% Complete' },
-      { date: new Date(startDate.getTime() + estimatedDays * 0.75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], description: '75% Complete' },
-      { date: endDate.toISOString().split('T')[0], description: 'Delivery' },
-    ];
-    
-    const data: ScheduleData = {
-      estimatedDays,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      milestones,
-      confidence: 0.82 + Math.random() * 0.1,
-    };
-    
-    return {
-      agentName: 'ScheduleAgent',
-      status: 'completed',
-      duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
-    };
-  } catch (error) {
-    return {
-      agentName: 'ScheduleAgent',
-      status: 'failed',
-      duration: Date.now() - startTime,
-      data: { error: String(error) },
-      confidence: 0,
-    };
-  }
-}
+Respond with JSON:
+{
+  "packagingType": "<type>",
+  "packagingCost": <number>,
+  "shippingMethod": "<ground|air|freight>",
+  "shippingCost": <number>,
+  "handlingPrecautions": ["<precaution1>", "<precaution2>"],
+  "estimatedTransitDays": <number>,
+  "hazmatRequired": <boolean>,
+  "exportControlled": <boolean>,
+  "confidence": <0-1>,
+  "reasoning": "<shipping logistics>"
+}`,
+  },
+  {
+    name: "ComplianceAgent",
+    department: "Compliance",
+    systemPrompt: `You are an AS9100 Rev D compliance auditor and regulatory specialist. Analyze the part for all applicable compliance requirements including AS9100, ITAR, EAR, DFARS, and industry-specific regulations. Generate the required documentation package. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Compliance assessment for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-/**
- * 3. Plan Agent - Creates manufacturing plan
- */
-export async function runPlanAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
-  try {
-    const complexity = input.complexity || 5;
-    const steps = Math.ceil(complexity / 2);
-    
-    const manufacturingSteps = Array.from({ length: steps }, (_, i) => ({
-      step: i + 1,
-      description: ['Design Review', 'Material Preparation', 'Machining', 'Assembly', 'Quality Check', 'Finishing'][i] || `Step ${i + 1}`,
-      duration: Math.ceil(Math.random() * 8 + 2),
-    }));
-    
-    const toolsRequired = ['CNC Machine', 'Lathe', 'Drill Press', 'Welding Equipment', 'Inspection Tools'].slice(0, Math.ceil(complexity / 2));
-    
-    const data: PlanData = {
-      manufacturingSteps,
-      toolsRequired,
-      materialRequirements: {
-        'Steel': 100 * complexity,
-        'Aluminum': 50 * complexity,
-        'Fasteners': 200 * complexity,
-      },
-      confidence: 0.80 + Math.random() * 0.12,
-    };
-    
-    return {
-      agentName: 'PlanAgent',
-      status: 'completed',
-      duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
-    };
-  } catch (error) {
-    return {
-      agentName: 'PlanAgent',
-      status: 'failed',
-      duration: Date.now() - startTime,
-      data: { error: String(error) },
-      confidence: 0,
-    };
-  }
-}
+Respond with JSON:
+{
+  "as9100Compliant": <boolean>,
+  "applicableStandards": ["<standard1>", "<standard2>"],
+  "requiredDocumentation": ["<doc1>", "<doc2>"],
+  "itarControlled": <boolean>,
+  "dfarsCompliant": <boolean>,
+  "countryOfOriginRequired": <boolean>,
+  "complianceGaps": ["<gap if any>"],
+  "riskLevel": "<low|medium|high>",
+  "confidence": <0-1>,
+  "reasoning": "<compliance assessment>"
+}`,
+  },
+  {
+    name: "AuditAgent",
+    department: "Audit",
+    systemPrompt: `You are an internal audit specialist for aerospace manufacturing. Create an audit trail framework, traceability requirements, and record-keeping plan for this part. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Audit trail planning for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-/**
- * 4. Cost Agent - Detailed cost analysis
- */
-export async function runCostAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
-  try {
-    const complexity = input.complexity || 5;
-    const quantity = input.quantity || 1;
-    
-    const materialCost = (complexity * 150) * quantity;
-    const laborCost = (complexity * 75) * quantity;
-    const toolingCost = complexity * 200;
-    const overheadCost = (materialCost + laborCost) * 0.2;
-    const totalCost = materialCost + laborCost + toolingCost + overheadCost;
-    
-    const data: CostData = {
-      materialCost,
-      laborCost,
-      overheadCost,
-      toolingCost,
-      totalCost,
-      costPerUnit: totalCost / quantity,
-      breakdown: {
-        materials: materialCost,
-        labor: laborCost,
-        tooling: toolingCost,
-        overhead: overheadCost,
-      },
-      confidence: 0.88 + Math.random() * 0.08,
-    };
-    
-    return {
-      agentName: 'CostAgent',
-      status: 'completed',
-      duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
-    };
-  } catch (error) {
-    return {
-      agentName: 'CostAgent',
-      status: 'failed',
-      duration: Date.now() - startTime,
-      data: { error: String(error) },
-      confidence: 0,
-    };
-  }
-}
+Respond with JSON:
+{
+  "traceabilityRequirements": ["<req1>", "<req2>"],
+  "recordRetentionYears": <number>,
+  "auditCheckpoints": [{"stage": "<stage>", "verification": "<what to verify>", "evidence": "<required evidence>"}],
+  "serialNumberRequired": <boolean>,
+  "lotTraceability": <boolean>,
+  "nonconformanceProcess": "<process description>",
+  "confidence": <0-1>,
+  "reasoning": "<audit planning rationale>"
+}`,
+  },
+  {
+    name: "ReflectionAgent",
+    department: "Reflection & Adjust",
+    systemPrompt: `You are a continuous improvement specialist. Analyze the overall manufacturing decision and identify patterns, lessons learned, accuracy improvements, and adjustments for future similar parts. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Reflection and adjustment analysis for "${input.fileName}"
+Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
+${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
-/**
- * 5. Risk Agent - Risk assessment
- */
-export async function runRiskAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
-  try {
-    const complexity = input.complexity || 5;
-    const riskLevel = complexity > 7 ? 'high' : complexity > 4 ? 'medium' : 'low';
-    
-    const risks = [
-      { description: 'Material availability', probability: 0.3, impact: 0.4 },
-      { description: 'Schedule delays', probability: 0.25, impact: 0.5 },
-      { description: 'Quality issues', probability: 0.15, impact: 0.6 },
-      { description: 'Equipment failure', probability: 0.1, impact: 0.7 },
-    ].slice(0, Math.ceil(complexity / 3));
-    
-    const data: RiskData = {
-      riskLevel: riskLevel as 'low' | 'medium' | 'high',
-      risks,
-      mitigations: [
-        'Maintain safety stock of materials',
-        'Implement quality control checkpoints',
-        'Schedule preventive maintenance',
-        'Cross-train staff',
+Respond with JSON:
+{
+  "lessonsLearned": ["<lesson1>", "<lesson2>"],
+  "accuracyScore": <0-1>,
+  "adjustments": ["<adjustment1>", "<adjustment2>"],
+  "similarPartPatterns": ["<pattern1>", "<pattern2>"],
+  "costDrivers": ["<driver1>", "<driver2>"],
+  "improvementOpportunities": ["<opportunity1>", "<opportunity2>"],
+  "confidence": <0-1>,
+  "reasoning": "<reflection and continuous improvement analysis>"
+}`,
+  },
+];
+
+// ─── Core Engine ─────────────────────────────────────────────────────
+
+function buildMessages(systemPrompt: string, userPrompt: string, imageUrl?: string) {
+  const messages: any[] = [
+    { role: "system" as const, content: systemPrompt },
+  ];
+
+  if (imageUrl) {
+    messages.push({
+      role: "user" as const,
+      content: [
+        { type: "image_url" as const, image_url: { url: imageUrl, detail: "high" as const } },
+        { type: "text" as const, text: userPrompt },
       ],
-      confidence: 0.85 + Math.random() * 0.1,
-    };
-    
+    });
+  } else {
+    messages.push({ role: "user" as const, content: userPrompt });
+  }
+
+  return messages;
+}
+
+function parseLLMResponse(content: string): Record<string, unknown> {
+  try {
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[1].trim());
+    }
+    return JSON.parse(content);
+  } catch {
+    return { raw: content };
+  }
+}
+
+/**
+ * Run a single agent — generic executor for any domain agent
+ */
+async function runAgent(definition: AgentDefinition, input: AgentInput): Promise<AgentOutput> {
+  const startTime = Date.now();
+
+  try {
+    const userPrompt = definition.userPromptBuilder(input);
+
+    const result = await invokeLLM({
+      messages: buildMessages(definition.systemPrompt, userPrompt, input.imageUrl),
+      response_format: { type: "json_object" },
+    });
+
+    const content = typeof result.choices[0].message.content === 'string'
+      ? result.choices[0].message.content
+      : JSON.stringify(result.choices[0].message.content);
+    const parsed = parseLLMResponse(content);
+
     return {
-      agentName: 'RiskAgent',
+      agentName: definition.name,
+      department: definition.department,
       status: 'completed',
       duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
+      data: parsed,
+      confidence: Number(parsed.confidence) || 0.80,
     };
   } catch (error) {
+    console.error(`${definition.name} error:`, error);
     return {
-      agentName: 'RiskAgent',
+      agentName: definition.name,
+      department: definition.department,
       status: 'failed',
       duration: Date.now() - startTime,
       data: { error: String(error) },
@@ -340,156 +350,111 @@ export async function runRiskAgent(input: AgentInput): Promise<AgentOutput> {
 }
 
 /**
- * 6. Optimize Agent - Cost and time optimization
+ * Analyze the engineering drawing — shared context for all agents
  */
-export async function runOptimizeAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
-  try {
-    const complexity = input.complexity || 5;
-    
-    const data: OptimizationData = {
-      suggestions: [
-        'Consider batch processing for cost reduction',
-        'Optimize tool paths for faster machining',
-        'Consolidate assembly steps',
-        'Use alternative materials for cost savings',
-      ].slice(0, Math.ceil(complexity / 2)),
-      potentialCostSavings: complexity * 500 + Math.random() * 1000,
-      potentialTimeSavings: Math.ceil(complexity * 0.5),
-      confidence: 0.78 + Math.random() * 0.12,
-    };
-    
-    return {
-      agentName: 'OptimizeAgent',
-      status: 'completed',
-      duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
-    };
-  } catch (error) {
-    return {
-      agentName: 'OptimizeAgent',
-      status: 'failed',
-      duration: Date.now() - startTime,
-      data: { error: String(error) },
-      confidence: 0,
-    };
+async function analyzeDrawing(input: AgentInput): Promise<string> {
+  if (!input.imageUrl) {
+    return input.drawingDescription || `Engineering drawing: ${input.fileName}`;
   }
-}
 
-/**
- * 7. Compliance Agent - AS9100 compliance check
- */
-export async function runComplianceAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
   try {
-    const data: ComplianceData = {
-      standard: 'AS9100',
-      compliant: true,
-      requirements: [
-        'Configuration Management',
-        'Product Safety',
-        'Foreign Object Debris (FOD) Control',
-        'Counterfeit Parts Prevention',
-        'Traceability',
+    const result = await invokeLLM({
+      messages: [
+        {
+          role: "system" as const,
+          content: "You are an expert mechanical engineer and CNC machinist. Analyze this engineering drawing and extract ALL key information: dimensions, tolerances, features (holes, slots, pockets, bosses, fillets, chamfers), material callouts, surface finishes, section views, and manufacturing notes. Be extremely detailed and specific.",
+        },
+        {
+          role: "user" as const,
+          content: [
+            { type: "image_url" as const, image_url: { url: input.imageUrl, detail: "high" as const } },
+            { type: "text" as const, text: `Analyze this engineering drawing (${input.fileName}). Extract every dimension, feature, hole diameter, tolerance, surface finish, and manufacturing note visible. A machinist needs to manufacture this part from your description alone.` },
+          ],
+        },
       ],
-      documentation: [
-        'Material Certs',
-        'Inspection Reports',
-        'Process Documentation',
-        'Traceability Records',
-      ],
-      confidence: 0.92 + Math.random() * 0.05,
-    };
-    
-    return {
-      agentName: 'ComplianceAgent',
-      status: 'completed',
-      duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
-    };
+    });
+
+    const content = result.choices[0].message.content;
+    return typeof content === 'string' ? content : JSON.stringify(content);
   } catch (error) {
-    return {
-      agentName: 'ComplianceAgent',
-      status: 'failed',
-      duration: Date.now() - startTime,
-      data: { error: String(error) },
-      confidence: 0,
-    };
+    console.error('Drawing analysis error:', error);
+    return `Engineering drawing: ${input.fileName}. Visual analysis unavailable.`;
   }
 }
 
 /**
- * 8. Learning Agent - Self-learning system
+ * Get agents for a specific domain
+ * The agent count is dynamic — determined by the domain, not hardcoded
  */
-export async function runLearningAgent(input: AgentInput): Promise<AgentOutput> {
-  const startTime = Date.now();
-  
-  try {
-    const previousAccuracy = 0.60 + Math.random() * 0.15;
-    const improvement = Math.random() * 0.25;
-    
-    const data: LearningData = {
-      previousAccuracy,
-      currentAccuracy: Math.min(previousAccuracy + improvement, 0.95),
-      improvement,
-      samplesProcessed: Math.floor(Math.random() * 5000 + 1000),
-      confidence: 0.88 + Math.random() * 0.08,
-    };
-    
-    return {
-      agentName: 'LearningAgent',
-      status: 'completed',
-      duration: Date.now() - startTime,
-      data,
-      confidence: data.confidence,
-    };
-  } catch (error) {
-    return {
-      agentName: 'LearningAgent',
-      status: 'failed',
-      duration: Date.now() - startTime,
-      data: { error: String(error) },
-      confidence: 0,
-    };
+export function getAgentsForDomain(domain: string): AgentDefinition[] {
+  switch (domain.toLowerCase()) {
+    case 'manufacturing':
+    case 'aerospace':
+      return MANUFACTURING_AGENTS; // 10 agents
+    // Future domains would define their own agent sets:
+    // case 'healthcare': return HEALTHCARE_AGENTS;
+    // case 'defense': return DEFENSE_AGENTS;
+    // case 'logistics': return LOGISTICS_AGENTS;
+    default:
+      return MANUFACTURING_AGENTS;
   }
 }
 
 /**
- * Run all 8 agents in parallel
+ * Run ALL domain agents in parallel — the core of Guardian OS
+ * 
+ * This is the architectural breakthrough:
+ * Traditional: Sales → Engineering → Quality → Planning → ... (sequential, weeks)
+ * Guardian:    Sales | Engineering | Quality | Planning | ... (parallel, seconds)
  */
-export async function runAllAgents(input: AgentInput): Promise<ProcessingResult> {
+export async function runAllAgents(input: AgentInput, domain: string = 'manufacturing'): Promise<ProcessingResult> {
   const startTime = Date.now();
-  
-  // Run all agents in parallel
-  const [quoteResult, scheduleResult, planResult, costResult, riskResult, optimizeResult, complianceResult, learningResult] = await Promise.all([
-    runQuoteAgent(input),
-    runScheduleAgent(input),
-    runPlanAgent(input),
-    runCostAgent(input),
-    runRiskAgent(input),
-    runOptimizeAgent(input),
-    runComplianceAgent(input),
-    runLearningAgent(input),
-  ]);
-  
+
+  // Step 1: Analyze the drawing (shared context)
+  const drawingAnalysis = await analyzeDrawing(input);
+  const enrichedInput: AgentInput = { ...input, drawingDescription: drawingAnalysis };
+
+  // Step 2: Get the agents for this domain
+  const agentDefinitions = getAgentsForDomain(domain);
+
+  // Step 3: Fire ALL agents simultaneously — this is the magic
+  const parallelStart = Date.now();
+  const agentResults = await Promise.all(
+    agentDefinitions.map(def => runAgent(def, enrichedInput))
+  );
+  const parallelDuration = Date.now() - parallelStart;
+
   const totalDuration = Date.now() - startTime;
-  
+
+  // Calculate sequential estimate (sum of all individual agent times)
+  const sequentialEstimate = agentResults.reduce((sum, a) => sum + a.duration, 0);
+  const speedMultiplier = sequentialEstimate > 0 ? sequentialEstimate / parallelDuration : agentResults.length;
+
+  // Extract summary from agent results
+  const salesData = agentResults.find(a => a.agentName === 'SalesAgent')?.data || {};
+  const planningData = agentResults.find(a => a.agentName === 'PlanningAgent')?.data || {};
+  const complianceData = agentResults.find(a => a.agentName === 'ComplianceAgent')?.data || {};
+  const avgConfidence = agentResults.reduce((sum, a) => sum + a.confidence, 0) / agentResults.length;
+
   return {
     fileName: input.fileName,
     totalDuration,
-    processingTime: totalDuration,
-    agents: [quoteResult, scheduleResult, planResult, costResult, riskResult, optimizeResult, complianceResult, learningResult],
-    quote: quoteResult.data as unknown as QuoteData,
-    schedule: scheduleResult.data as unknown as ScheduleData,
-    plan: planResult.data as unknown as PlanData,
-    costs: costResult.data as unknown as CostData,
-    risks: riskResult.data as unknown as RiskData,
-    optimizations: optimizeResult.data as unknown as OptimizationData,
-    compliance: complianceResult.data as unknown as ComplianceData,
-    learning: learningResult.data as unknown as LearningData,
+    processingTime: parallelDuration,
+    sequentialEstimate,
+    speedMultiplier: Math.round(speedMultiplier * 10) / 10,
+    agentCount: agentResults.length,
+    domain,
+    agents: agentResults,
+    drawingAnalysis,
+    summary: {
+      totalPrice: Number(salesData.quotedPrice) || 0,
+      leadTimeDays: Number(planningData.totalLeadTimeDays) || 0,
+      riskLevel: String(complianceData.riskLevel || 'medium'),
+      complianceStatus: complianceData.as9100Compliant ? 'Compliant' : 'Review Required',
+      confidence: Math.round(avgConfidence * 100) / 100,
+    },
   };
 }
+
+// Legacy compatibility exports
+export type { AgentInput as LegacyAgentInput };

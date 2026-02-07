@@ -60,5 +60,25 @@
 - [ ] System architecture documentation
 - [ ] Troubleshooting guide
 
+## Dynamic Domain-Driven Agent Architecture
+- [x] Build dynamic agent framework (agent count driven by domain, not fixed)
+- [x] Sales Agent (LLM-powered: pricing, customer reqs, margin)
+- [x] Engineering Agent (LLM-powered: drawing analysis, DFM, tolerances)
+- [x] Quality Agent (LLM-powered: inspection planning, AS9100, acceptance criteria)
+- [x] Planning Agent (LLM-powered: production scheduling, capacity, lead times)
+- [x] Procurement Agent (LLM-powered: material sourcing, vendor selection)
+- [x] Manufacturing Agent (LLM-powered: machining ops, tooling, cycle times)
+- [x] Shipping Agent (LLM-powered: packaging, logistics, delivery)
+- [x] Compliance Agent (LLM-powered: regulatory, certifications, documentation)
+- [x] Audit Agent (LLM-powered: traceability, audit trail, records)
+- [x] Reflection & Adjust Agent (LLM-powered: learning, accuracy, patterns)
+- [x] Add image upload support for engineering drawings
+- [x] Upload engineering drawing to S3 and pass URL to LLM agents
+- [x] Update frontend with dynamic agent visualization (scales with agent count)
+- [x] Sequential vs parallel timing comparison display
+- [x] Engineering drawing preview on upload
+- [ ] Test with uploaded bracket drawing (Esercizio66.jpeg)
+- [x] Update landing page hero for investor demos
+
 ## Completed Items
 (Items will be marked as [x] as they are completed)

@@ -1,8 +1,9 @@
-import React from 'react';
-import { Zap, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, AlertCircle, Clock, Zap, Activity } from 'lucide-react';
 
 export interface AgentStatus {
   name: string;
+  department: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   duration?: number;
   confidence?: number;
@@ -11,130 +12,187 @@ export interface AgentStatus {
 interface AgentVisualizationProps {
   agents: AgentStatus[];
   totalDuration?: number;
+  sequentialEstimate?: number;
+  speedMultiplier?: number;
+  agentCount?: number;
+  isProcessing?: boolean;
 }
 
-export function AgentVisualization({ agents, totalDuration }: AgentVisualizationProps) {
-  const getAgentColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-accent text-accent-foreground';
-      case 'processing':
-        return 'bg-muted text-muted-foreground cyber-pulse';
-      case 'failed':
-        return 'bg-destructive text-destructive-foreground';
-      default:
-        return 'bg-muted/50 text-muted-foreground';
-    }
-  };
+const DEPARTMENT_COLORS: Record<string, string> = {
+  'Sales': '#00D9FF',
+  'Engineering': '#00FF41',
+  'Quality': '#FFD700',
+  'Planning': '#FF6B35',
+  'Procurement': '#A855F7',
+  'Manufacturing': '#00D9FF',
+  'Shipping': '#06B6D4',
+  'Compliance': '#EF4444',
+  'Audit': '#F59E0B',
+  'Reflection & Adjust': '#10B981',
+};
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle2 className="w-4 h-4" />;
-      case 'processing':
-        return <Zap className="w-4 h-4 animate-spin" />;
-      case 'failed':
-        return <AlertCircle className="w-4 h-4" />;
-      default:
-        return <div className="w-4 h-4 rounded-full border border-current" />;
-    }
-  };
+export function AgentVisualization({
+  agents,
+  totalDuration,
+  sequentialEstimate,
+  speedMultiplier,
+  agentCount,
+  isProcessing,
+}: AgentVisualizationProps) {
+  const [animatedAgents, setAnimatedAgents] = useState<AgentStatus[]>([]);
 
-  const agentNames = [
-    'QuoteAgent',
-    'ScheduleAgent',
-    'PlanAgent',
-    'CostAgent',
-    'RiskAgent',
-    'OptimizeAgent',
-    'ComplianceAgent',
-    'LearningAgent',
-  ];
+  // Animate agents appearing one by one during processing
+  useEffect(() => {
+    if (isProcessing && agents.length === 0) {
+      // Show pending state
+      return;
+    }
+    setAnimatedAgents(agents);
+  }, [agents, isProcessing]);
+
+  const completedCount = animatedAgents.filter(a => a.status === 'completed').length;
+  const failedCount = animatedAgents.filter(a => a.status === 'failed').length;
+  const totalCount = animatedAgents.length || agentCount || 0;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header with timing comparison */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">8-Agent Parallel Processing</h3>
-          <p className="text-sm text-muted-foreground">Real-time manufacturing analysis framework</p>
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Activity className="w-5 h-5 text-accent" />
+            {totalCount}-Agent Parallel Processing
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Every department fires simultaneously — not sequentially
+          </p>
         </div>
+
         {totalDuration && (
-          <div className="text-right">
-            <p className="text-2xl font-bold text-accent">{(totalDuration / 1000).toFixed(2)}s</p>
-            <p className="text-xs text-muted-foreground">Processing Time</p>
+          <div className="flex gap-6">
+            {/* Parallel time (actual) */}
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Guardian (Parallel)</p>
+              <p className="text-2xl font-bold text-accent">{(totalDuration / 1000).toFixed(1)}s</p>
+            </div>
+
+            {/* Sequential estimate */}
+            {sequentialEstimate && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Traditional (Sequential)</p>
+                <p className="text-2xl font-bold text-muted-foreground line-through">
+                  {(sequentialEstimate / 1000).toFixed(1)}s
+                </p>
+              </div>
+            )}
+
+            {/* Speed multiplier */}
+            {speedMultiplier && speedMultiplier > 1 && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Speed Gain</p>
+                <p className="text-2xl font-bold" style={{ color: '#00FF41' }}>
+                  {speedMultiplier}x faster
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Agent Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {agentNames.map((agentName) => {
-          const agent = agents.find(a => a.name === agentName);
-          const status = agent?.status || 'pending';
-          const confidence = agent?.confidence;
+      {/* Parallel execution visualization — all agents side by side */}
+      <div className="relative">
+        {/* Timeline bar showing parallel execution */}
+        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(140px, 1fr))` }}>
+          {animatedAgents.map((agent) => {
+            const color = DEPARTMENT_COLORS[agent.department] || '#00D9FF';
+            const isComplete = agent.status === 'completed';
+            const isFailed = agent.status === 'failed';
 
-          return (
-            <div
-              key={agentName}
-              className={`p-3 rounded-lg border border-border transition-all duration-300 ${getAgentColor(status)}`}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2 flex-1">
-                  {getStatusIcon(status)}
-                  <span className="text-xs font-semibold truncate">{agentName.replace('Agent', '')}</span>
+            return (
+              <div
+                key={agent.name}
+                className="relative p-3 rounded-lg border transition-all duration-500"
+                style={{
+                  borderColor: isComplete ? color : isFailed ? '#EF4444' : 'var(--border)',
+                  backgroundColor: isComplete ? `${color}10` : 'transparent',
+                  boxShadow: isComplete ? `0 0 12px ${color}30` : 'none',
+                }}
+              >
+                {/* Department label */}
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color }}>
+                    {agent.department}
+                  </span>
                 </div>
-              </div>
-              
-              {agent?.duration && (
-                <p className="text-xs opacity-75">{(agent.duration).toFixed(0)}ms</p>
-              )}
-              
-              {confidence !== undefined && (
-                <div className="mt-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs">Confidence</span>
-                    <span className="text-xs font-bold">{(confidence * 100).toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-background/50 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent transition-all duration-300"
-                      style={{ width: `${confidence * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Processing Timeline */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-foreground">Processing Pipeline</h4>
-        <div className="flex items-center gap-2">
-          {agentNames.map((_, index) => (
-            <React.Fragment key={index}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
-                index < agents.filter(a => a.status === 'completed').length
-                  ? 'bg-accent border-accent text-accent-foreground'
-                  : index < agents.filter(a => a.status === 'completed' || a.status === 'processing').length
-                  ? 'bg-muted border-muted text-muted-foreground cyber-pulse'
-                  : 'bg-background border-border text-muted-foreground'
-              }`}>
-                {index + 1}
+                {/* Agent name */}
+                <p className="text-xs font-medium text-foreground mb-2 truncate">
+                  {agent.name.replace('Agent', '')}
+                </p>
+
+                {/* Status */}
+                <div className="flex items-center justify-between">
+                  {isComplete ? (
+                    <CheckCircle2 className="w-4 h-4" style={{ color }} />
+                  ) : isFailed ? (
+                    <AlertCircle className="w-4 h-4 text-destructive" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border-2 border-current animate-pulse" style={{ borderColor: color }} />
+                  )}
+
+                  {agent.duration !== undefined && (
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                      <Clock className="w-3 h-3" />
+                      {(agent.duration / 1000).toFixed(1)}s
+                    </span>
+                  )}
+                </div>
+
+                {/* Confidence bar */}
+                {agent.confidence !== undefined && agent.confidence > 0 && (
+                  <div className="mt-2">
+                    <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${color}20` }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${agent.confidence * 100}%`,
+                          backgroundColor: color,
+                        }}
+                      />
+                    </div>
+                    <span className="text-[9px] text-muted-foreground">{(agent.confidence * 100).toFixed(0)}%</span>
+                  </div>
+                )}
               </div>
-              {index < agentNames.length - 1 && (
-                <div className={`flex-1 h-1 ${
-                  index < agents.filter(a => a.status === 'completed').length
-                    ? 'bg-accent'
-                    : 'bg-border'
-                }`} />
-              )}
-            </React.Fragment>
-          ))}
+            );
+          })}
         </div>
       </div>
+
+      {/* Summary bar */}
+      {completedCount > 0 && (
+        <div className="flex items-center gap-4 p-3 rounded-lg border border-border bg-card/30">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-accent" />
+            <span className="text-sm text-foreground font-medium">
+              {completedCount}/{totalCount} agents completed
+            </span>
+          </div>
+          {failedCount > 0 && (
+            <span className="text-sm text-destructive">
+              {failedCount} failed
+            </span>
+          )}
+          <div className="flex-1" />
+          <span className="text-xs text-muted-foreground">
+            All departments processed in parallel
+          </span>
+        </div>
+      )}
     </div>
   );
 }
