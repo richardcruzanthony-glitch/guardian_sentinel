@@ -1,13 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight, Crosshair, Factory } from "lucide-react";
+import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight, Crosshair, Factory, Ambulance } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualization";
 
-type Domain = 'manufacturing' | 'defense';
+type Domain = 'manufacturing' | 'defense' | 'medical';
 
 const DOMAIN_CONFIG = {
   manufacturing: {
@@ -46,6 +46,24 @@ const DOMAIN_CONFIG = {
     paramLabel3: 'Force Elements',
     summaryLabels: { price: 'Threat Level', time: 'Time Pressure', risk: 'Risk Level', compliance: 'LOAC Status' },
   },
+  medical: {
+    label: 'Medical Dispatch',
+    icon: Ambulance,
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500',
+    description: 'Input a medical emergency. Guardian fires Triage, Dispatch, EMT/Paramedic, ER Prep, Pharmacy, Lab, Imaging, Billing, Compliance, and QI agents',
+    uploadLabel: 'Input Medical Emergency',
+    uploadHint: 'Patient info, scene report, or medical imagery',
+    acceptTypes: 'image/*,.pdf,.txt,.doc,.docx',
+    processLabel: 'Fire All Departments — Full Emergency Response',
+    traditionalDepts: ['Triage', 'Dispatch', 'EMT', 'ER Prep', 'Pharmacy', 'Lab', 'Imaging', 'Billing', 'Comply'],
+    guardianDepts: ['Triage', 'Dispatch', 'EMT', 'ER Prep', 'Pharmacy', 'Lab', 'Imaging', 'Billing', 'Comply', 'QI'],
+    traditionalTime: '30–60 min sequential handoffs',
+    paramLabel1: 'Scene Type',
+    paramLabel2: 'Severity',
+    paramLabel3: 'Patients',
+    summaryLabels: { price: 'Est. Charges', time: 'Response Time', risk: 'ESI Level', compliance: 'EMTALA' },
+  },
 };
 
 export default function Home() {
@@ -57,6 +75,7 @@ export default function Home() {
   const [quantity, setQuantity] = useState(1);
   const [material, setMaterial] = useState('Aluminum 6061-T6');
   const [threatEnv, setThreatEnv] = useState('Contested multi-domain');
+  const [sceneType, setSceneType] = useState('Trauma - MVC');
   const [scenarioText, setScenarioText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingResult, setProcessingResult] = useState<any>(null);
@@ -75,6 +94,8 @@ export default function Home() {
     setSelectedFile(null);
     setPreviewUrl(null);
     setScenarioText('');
+    setComplexity(5);
+    setQuantity(1);
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,7 +133,7 @@ export default function Home() {
     }
   }, []);
 
-  const canProcess = domain === 'defense' ? (selectedFile || scenarioText.trim().length > 10) : !!selectedFile;
+  const canProcess = (domain === 'defense' || domain === 'medical') ? (selectedFile || scenarioText.trim().length > 10) : !!selectedFile;
 
   const handleProcess = async () => {
     if (!canProcess) return;
@@ -123,7 +144,7 @@ export default function Home() {
 
     try {
       let imageUrl: string | undefined;
-      let fileName = selectedFile?.name || 'scenario-briefing.txt';
+      let fileName = selectedFile?.name || (domain === 'medical' ? 'medical-dispatch.txt' : 'scenario-briefing.txt');
 
       // Upload image if present
       if (selectedFile?.type.startsWith('image/')) {
@@ -145,21 +166,24 @@ export default function Home() {
         imageUrl = uploadResult.url;
       }
 
-      // For defense domain, use scenario text as the file name if no file
-      if (domain === 'defense' && !selectedFile && scenarioText) {
+      // For text-based domains, use scenario text as the file name if no file
+      if ((domain === 'defense' || domain === 'medical') && !selectedFile && scenarioText) {
         fileName = scenarioText.substring(0, 100);
       }
 
-      setProcessingStage(domain === 'defense' 
-        ? 'Firing kill chain — all domains simultaneously...' 
-        : 'Firing all domain agents in parallel...');
+      setProcessingStage(
+        domain === 'defense' 
+          ? 'Firing kill chain — all domains simultaneously...' 
+          : domain === 'medical'
+            ? 'Dispatching all departments simultaneously...'
+            : 'Firing all domain agents in parallel...');
 
       const result = await processMutation.mutateAsync({
         fileName,
         fileSize: selectedFile?.size || scenarioText.length,
         complexity,
         quantity,
-        material: domain === 'defense' ? threatEnv : material,
+        material: domain === 'defense' ? threatEnv : domain === 'medical' ? sceneType : material,
         imageUrl,
         domain,
       });
@@ -199,7 +223,7 @@ export default function Home() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg ${domain === 'defense' ? 'bg-red-500' : 'bg-accent'} flex items-center justify-center`}>
+            <div className={`w-10 h-10 rounded-lg ${domain === 'defense' ? 'bg-red-500' : domain === 'medical' ? 'bg-blue-500' : 'bg-accent'} flex items-center justify-center`}>
               <Zap className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -233,6 +257,17 @@ export default function Home() {
                 <Crosshair className="w-3 h-3" />
                 Kill Chain
               </button>
+              <button
+                onClick={() => handleDomainSwitch('medical')}
+                className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                  domain === 'medical' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-card text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Ambulance className="w-3 h-3" />
+                Medical
+              </button>
             </div>
 
             {isAuthenticated ? (
@@ -254,14 +289,18 @@ export default function Home() {
         <section className="space-y-4">
           <div className="space-y-3">
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${
-              domain === 'defense' ? 'border-red-500/30 bg-red-500/5 text-red-400' : 'border-accent/30 bg-accent/5 text-accent'
+              domain === 'defense' ? 'border-red-500/30 bg-red-500/5 text-red-400' 
+              : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5 text-blue-400'
+              : 'border-accent/30 bg-accent/5 text-accent'
             } text-xs font-medium`}>
               <DomainIcon className="w-3 h-3" />
-              {domain === 'defense' ? 'Kill Chain Decision Engine' : 'Dynamic Domain-Driven Decision Engine'}
+              {domain === 'defense' ? 'Kill Chain Decision Engine' : domain === 'medical' ? 'Emergency Medical Decision Engine' : 'Dynamic Domain-Driven Decision Engine'}
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-foreground cyber-glow leading-tight">
               {domain === 'defense' ? (
                 <>Every Kill Chain Node.<br /><span className="text-red-400">Simultaneously.</span></>
+              ) : domain === 'medical' ? (
+                <>Every Department.<br /><span className="text-blue-400">Simultaneously.</span></>
               ) : (
                 <>Every Department.<br /><span className="text-accent">Simultaneously.</span></>
               )}
@@ -291,20 +330,22 @@ export default function Home() {
                 {config.traditionalTime}
               </p>
             </div>
-            <div className={`p-4 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : 'border-accent/30 bg-accent/5'}`}>
-              <p className={`text-xs ${domain === 'defense' ? 'text-red-400' : 'text-accent'} uppercase tracking-wider mb-2`}>Guardian OS</p>
+            <div className={`p-4 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : 'border-accent/30 bg-accent/5'}`}>
+              <p className={`text-xs ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'} uppercase tracking-wider mb-2`}>Guardian OS</p>
               <div className="flex items-center gap-1 text-xs flex-wrap">
                 {config.guardianDepts.map((dept) => (
                   <span key={dept} className={`px-1.5 py-0.5 rounded text-[10px] border ${
                     domain === 'defense' 
                       ? 'bg-red-500/20 text-red-400 border-red-500/30' 
-                      : 'bg-accent/20 text-accent border-accent/30'
+                      : domain === 'medical'
+                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                        : 'bg-accent/20 text-accent border-accent/30'
                   }`}>
                     {dept}
                   </span>
                 ))}
               </div>
-              <p className={`text-sm ${domain === 'defense' ? 'text-red-400' : 'text-accent'} mt-2 font-semibold`}>
+              <p className={`text-sm ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'} mt-2 font-semibold`}>
                 <Zap className="w-3 h-3 inline mr-1" />
                 All parallel — seconds
               </p>
@@ -326,13 +367,17 @@ export default function Home() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Defense: Scenario Text Input */}
-            {domain === 'defense' && (
+            {(domain === 'defense' || domain === 'medical') && (
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Scenario Briefing</label>
+                <label className="text-sm font-semibold text-foreground">
+                  {domain === 'medical' ? 'Emergency Dispatch Report' : 'Scenario Briefing'}
+                </label>
                 <textarea
                   value={scenarioText}
                   onChange={(e) => setScenarioText(e.target.value)}
-                  placeholder="Enter threat scenario briefing... e.g., 'Enemy mobile SAM battery detected at grid reference NK 123 456, moving south along MSR Tampa. SIGINT indicates active S-300 radar emissions. Friendly CAS aircraft operating within 40km. Civilian village 2km east of target.'"
+                  placeholder={domain === 'medical' 
+                    ? "Enter emergency dispatch report... e.g., '911 call received: 45-year-old male, crushing chest pain radiating to left arm, onset 20 minutes ago. History of hypertension and diabetes. Diaphoretic, pale, BP 180/110, HR 110, SpO2 94%. Location: 1234 Main St, 3rd floor apartment, elevator available. Patient conscious and alert but in severe distress.'"
+                    : "Enter threat scenario briefing... e.g., 'Enemy mobile SAM battery detected at grid reference NK 123 456, moving south along MSR Tampa. SIGINT indicates active S-300 radar emissions. Friendly CAS aircraft operating within 40km. Civilian village 2km east of target.'"}
                   className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm min-h-[120px] resize-y placeholder:text-muted-foreground/50"
                 />
               </div>
@@ -377,7 +422,39 @@ export default function Home() {
 
             {/* Parameters — Domain-specific */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {domain === 'manufacturing' ? (
+              {domain === 'medical' ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Scene Type</label>
+                    <select
+                      value={sceneType}
+                      onChange={(e) => setSceneType(e.target.value)}
+                      className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    >
+                      <option value="Trauma - MVC">Trauma — Motor Vehicle Collision</option>
+                      <option value="Trauma - Fall">Trauma — Fall</option>
+                      <option value="Trauma - Penetrating">Trauma — Penetrating Injury</option>
+                      <option value="Cardiac - STEMI">Cardiac — STEMI / Chest Pain</option>
+                      <option value="Cardiac - Arrest">Cardiac — Arrest</option>
+                      <option value="Stroke - CVA">Stroke — CVA</option>
+                      <option value="Respiratory - Distress">Respiratory Distress</option>
+                      <option value="Overdose">Overdose / Poisoning</option>
+                      <option value="Pediatric Emergency">Pediatric Emergency</option>
+                      <option value="OB Emergency">OB / Obstetric Emergency</option>
+                      <option value="Burns">Burns</option>
+                      <option value="Mass Casualty">Mass Casualty Incident</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Severity ({complexity}/10)</label>
+                    <input type="range" min="1" max="10" value={complexity} onChange={(e) => setComplexity(Number(e.target.value))} className="w-full accent-blue-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Patients</label>
+                    <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm" />
+                  </div>
+                </>
+              ) : domain === 'manufacturing' ? (
                 <>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground">Material</label>
@@ -439,7 +516,10 @@ export default function Home() {
             <Button
               onClick={handleProcess}
               disabled={!canProcess || isProcessing}
-              className={`w-full font-semibold ${domain === 'defense' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-accent hover:bg-accent/90 text-accent-foreground'}`}
+              className={`w-full font-semibold ${
+                domain === 'defense' ? 'bg-red-500 hover:bg-red-600 text-white' 
+                : domain === 'medical' ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                : 'bg-accent hover:bg-accent/90 text-accent-foreground'}`}
               size="lg"
             >
               {isProcessing ? (
@@ -449,7 +529,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  {domain === 'defense' ? <Crosshair className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                  {domain === 'defense' ? <Crosshair className="w-4 h-4 mr-2" /> : domain === 'medical' ? <Ambulance className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
                   {config.processLabel}
                 </>
               )}
@@ -461,15 +541,15 @@ export default function Home() {
         {processingResult && (
           <div className="space-y-6">
             {/* Speed Comparison Hero */}
-            <div className={`p-6 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : 'border-accent/30 bg-accent/5'}`}>
+            <div className={`p-6 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : 'border-accent/30 bg-accent/5'}`}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Agents Fired</p>
-                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : 'text-accent'}`}>{processingResult.agentCount}</p>
+                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`}>{processingResult.agentCount}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Parallel Time</p>
-                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : 'text-accent'}`}>{(processingResult.totalDuration / 1000).toFixed(1)}s</p>
+                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`}>{(processingResult.totalDuration / 1000).toFixed(1)}s</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Sequential Would Take</p>
@@ -477,7 +557,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Speed Multiplier</p>
-                  <p className="text-3xl font-bold" style={{ color: domain === 'defense' ? '#FF4444' : '#00FF41' }}>{processingResult.speedMultiplier}x</p>
+                  <p className="text-3xl font-bold" style={{ color: domain === 'defense' ? '#FF4444' : domain === 'medical' ? '#60A5FA' : '#00FF41' }}>{processingResult.speedMultiplier}x</p>
                 </div>
               </div>
             </div>
@@ -486,8 +566,8 @@ export default function Home() {
             <Card className="border-border bg-card/50 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Activity className={`w-5 h-5 ${domain === 'defense' ? 'text-red-400' : 'text-accent'}`} />
-                  {domain === 'defense' ? 'Kill Chain Parallel Execution' : 'Parallel Agent Execution'}
+                  <Activity className={`w-5 h-5 ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`} />
+                  {domain === 'defense' ? 'Kill Chain Parallel Execution' : domain === 'medical' ? 'Emergency Response Parallel Execution' : 'Parallel Agent Execution'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -505,7 +585,7 @@ export default function Home() {
             {processingResult.drawingAnalysis && (
               <Card className="border-border bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle>{domain === 'defense' ? 'Intelligence Assessment' : 'Drawing Analysis'}</CardTitle>
+                  <CardTitle>{domain === 'defense' ? 'Intelligence Assessment' : domain === 'medical' ? 'Patient Assessment' : 'Drawing Analysis'}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
@@ -517,7 +597,40 @@ export default function Home() {
 
             {/* Summary Cards — Domain-aware */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {domain === 'defense' ? (
+              {domain === 'medical' ? (
+                <>
+                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">ESI Triage Level</p>
+                    <p className={`text-xl font-bold ${
+                      processingResult.summary.riskLevel?.includes('1') ? 'text-red-400' :
+                      processingResult.summary.riskLevel?.includes('2') ? 'text-orange-400' :
+                      processingResult.summary.riskLevel?.includes('3') ? 'text-yellow-400' : 'text-blue-400'
+                    }`}>
+                      {processingResult.summary.riskLevel || 'ASSESSING'}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Response Time</p>
+                    <p className="text-xl font-bold text-blue-400">
+                      {processingResult.summary.leadTimeDays || '—'} min
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">EMTALA Status</p>
+                    <p className={`text-xl font-bold ${
+                      processingResult.summary.complianceStatus === 'EMTALA Compliant' ? 'text-green-400' : 'text-yellow-400'
+                    }`}>
+                      {processingResult.summary.complianceStatus || 'REVIEWING'}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Est. Charges</p>
+                    <p className="text-xl font-bold text-foreground">
+                      ${processingResult.summary.totalPrice ? processingResult.summary.totalPrice.toLocaleString() : '—'}
+                    </p>
+                  </div>
+                </>
+              ) : domain === 'defense' ? (
                 <>
                   <div className="p-4 rounded-lg border border-border bg-card/30">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Threat Classification</p>
@@ -589,7 +702,7 @@ export default function Home() {
             {/* Individual Agent Results — Expandable */}
             <Card className="border-border bg-card/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>{domain === 'defense' ? 'Kill Chain Node Reports' : 'Department Reports'}</CardTitle>
+                <CardTitle>{domain === 'defense' ? 'Kill Chain Node Reports' : domain === 'medical' ? 'Emergency Response Department Reports' : 'Department Reports'}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {processingResult.agents.map((agent: any) => (
@@ -636,7 +749,9 @@ export default function Home() {
             <p className="text-xs text-muted-foreground mt-1">
               {domain === 'defense' 
                 ? 'Every kill chain node fires simultaneously. Seconds, not hours.'
-                : 'Every department that touches a decision fires simultaneously.'}
+                : domain === 'medical'
+                  ? 'Every emergency department fires simultaneously. Seconds, not minutes.'
+                  : 'Every department that touches a decision fires simultaneously.'}
             </p>
           </div>
         </footer>

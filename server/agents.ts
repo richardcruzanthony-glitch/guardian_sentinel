@@ -532,6 +532,265 @@ Respond with JSON:
   },
 ];
 
+// ─── Medical Dispatch Domain Agents ─────────────────────────────────
+
+const MEDICAL_DISPATCH_AGENTS: AgentDefinition[] = [
+  {
+    name: "TriageAgent",
+    department: "Triage",
+    systemPrompt: `You are an emergency triage nurse with 20 years of experience using the Emergency Severity Index (ESI). You rapidly assess patient acuity, assign triage levels, identify life threats, and prioritize care. You follow START triage for mass casualty and ESI for individual patients. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `INCOMING PATIENT: ${input.fileName}
+Severity estimate: ${input.complexity || 5}/10
+Patients involved: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Dispatch information:\n${input.drawingDescription}` : ''}
+
+Perform triage assessment.
+
+Respond with JSON:
+{
+  "esiLevel": <1-5>,
+  "chiefComplaint": "<primary complaint>",
+  "lifeThreats": ["<threat if any>"],
+  "vitalSignsConcerns": ["<concern1>", "<concern2>"],
+  "consciousnessLevel": "<alert|verbal|pain|unresponsive>",
+  "airwayStatus": "<patent|compromised|obstructed>",
+  "breathingStatus": "<normal|labored|absent>",
+  "circulationStatus": "<stable|unstable|absent>",
+  "resourcesNeeded": <number>,
+  "confidence": <0-1>,
+  "reasoning": "<triage assessment rationale>"
+}`,
+  },
+  {
+    name: "DispatchAgent",
+    department: "Dispatch & Routing",
+    systemPrompt: `You are an emergency medical dispatch coordinator. You determine the appropriate response level (BLS/ALS/Critical Care), select the nearest available unit, calculate response times, and coordinate with receiving facilities. You follow Emergency Medical Dispatch (EMD) protocols. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `DISPATCH REQUEST: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Call information:\n${input.drawingDescription}` : ''}
+
+Determine dispatch response.
+
+Respond with JSON:
+{
+  "responseLevel": "<BLS|ALS|Critical_Care|Air_Medical>",
+  "unitType": "<ambulance|medic_unit|rescue|helicopter>",
+  "estimatedResponseMinutes": <number>,
+  "preArrivalInstructions": ["<instruction1>", "<instruction2>"],
+  "mutualAidNeeded": <boolean>,
+  "stagingRequired": <boolean>,
+  "additionalResources": ["<resource if needed>"],
+  "receivingFacility": "<recommended hospital/trauma center>",
+  "confidence": <0-1>,
+  "reasoning": "<dispatch decision rationale>"
+}`,
+  },
+  {
+    name: "ParamedicAgent",
+    department: "EMT / Paramedic",
+    systemPrompt: `You are a senior paramedic and field medicine specialist. You develop prehospital treatment plans, determine interventions, medication administration, and patient stabilization protocols. You follow NREMT and local medical direction protocols. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `FIELD TREATMENT PLAN: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Patient assessment:\n${input.drawingDescription}` : ''}
+
+Develop prehospital treatment plan.
+
+Respond with JSON:
+{
+  "primaryAssessment": {"airway": "<status>", "breathing": "<status>", "circulation": "<status>", "disability": "<status>", "exposure": "<findings>"},
+  "interventions": [{"intervention": "<what>", "priority": "<immediate|urgent|routine>", "timing": "<when>"}],
+  "medications": [{"drug": "<name>", "dose": "<dose>", "route": "<IV|IM|IO|PO|IN>", "indication": "<why>"}],
+  "ivAccess": {"needed": <boolean>, "type": "<peripheral|IO|central>", "fluid": "<type>"},
+  "immobilization": "<none|c-spine|splint|backboard>",
+  "transportPosition": "<supine|fowlers|recovery|trendelenburg>",
+  "onlinemedicalDirection": <boolean>,
+  "confidence": <0-1>,
+  "reasoning": "<prehospital treatment rationale>"
+}`,
+  },
+  {
+    name: "ERPrepAgent",
+    department: "ER Preparation",
+    systemPrompt: `You are an Emergency Department charge nurse and trauma team coordinator. You prepare the receiving facility — activate trauma teams, prepare resuscitation bays, stage equipment, and coordinate specialty consults. You follow ATLS and institutional trauma activation criteria. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `ER PREPARATION: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Incoming patient info:\n${input.drawingDescription}` : ''}
+
+Prepare the emergency department.
+
+Respond with JSON:
+{
+  "traumaActivation": "<full|modified|none>",
+  "teamRequired": ["<role1>", "<role2>", "<role3>"],
+  "bayAssignment": "<resus_bay|trauma_bay|standard_bed|isolation>",
+  "equipmentStaged": ["<equipment1>", "<equipment2>"],
+  "bloodBankAlert": <boolean>,
+  "bloodType": "<O_neg_standby|type_and_screen|type_and_cross>",
+  "specialtyConsults": ["<specialty if needed>"],
+  "isolationPrecautions": "<standard|droplet|airborne|contact|none>",
+  "estimatedArrivalMinutes": <number>,
+  "confidence": <0-1>,
+  "reasoning": "<ER preparation rationale>"
+}`,
+  },
+  {
+    name: "PharmacyAgent",
+    department: "Pharmacy",
+    systemPrompt: `You are a clinical pharmacist specializing in emergency medicine. You prepare medication orders, check for drug interactions, calculate weight-based dosing, and ensure formulary compliance. You follow evidence-based emergency pharmacotherapy guidelines. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `PHARMACY PREPARATION: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Patient information:\n${input.drawingDescription}` : ''}
+
+Prepare pharmacy response.
+
+Respond with JSON:
+{
+  "anticipatedMedications": [{"drug": "<name>", "dose": "<dose>", "route": "<route>", "indication": "<why>", "prepTime": "<minutes>"}],
+  "drugInteractionRisks": ["<interaction if any>"],
+  "allergyConsiderations": ["<consideration>"],
+  "controlledSubstancesNeeded": <boolean>,
+  "bloodProducts": ["<product if needed>"],
+  "antidotesStaged": ["<antidote if applicable>"],
+  "totalEstimatedCost": <number>,
+  "confidence": <0-1>,
+  "reasoning": "<pharmacy preparation rationale>"
+}`,
+  },
+  {
+    name: "LabAgent",
+    department: "Laboratory",
+    systemPrompt: `You are a clinical laboratory director. You anticipate lab orders, prepare stat panels, coordinate blood bank, and ensure rapid turnaround for critical results. You follow CLIA and CAP guidelines. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `LAB PREPARATION: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Patient information:\n${input.drawingDescription}` : ''}
+
+Prepare laboratory response.
+
+Respond with JSON:
+{
+  "statPanels": ["<panel1>", "<panel2>"],
+  "criticalTests": [{"test": "<name>", "turnaroundMinutes": <number>, "priority": "<stat|urgent|routine>"}],
+  "bloodBankPrep": {"typeAndScreen": <boolean>, "crossMatch": <boolean>, "unitsReady": <number>},
+  "pointOfCareTests": ["<POC test1>", "<POC test2>"],
+  "specialtyTests": ["<test if needed>"],
+  "estimatedTurnaroundMinutes": <number>,
+  "confidence": <0-1>,
+  "reasoning": "<laboratory preparation rationale>"
+}`,
+  },
+  {
+    name: "ImagingAgent",
+    department: "Imaging / Radiology",
+    systemPrompt: `You are a radiology department coordinator and emergency radiologist. You anticipate imaging needs, prepare modalities (X-ray, CT, ultrasound, MRI), coordinate portable studies, and prioritize reads. You follow ACR Appropriateness Criteria. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `IMAGING PREPARATION: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Patient information:\n${input.drawingDescription}` : ''}
+
+Prepare imaging response.
+
+Respond with JSON:
+{
+  "anticipatedStudies": [{"modality": "<CT|XR|US|MRI>", "bodyPart": "<area>", "contrast": <boolean>, "priority": "<stat|urgent|routine>"}],
+  "portableStudiesNeeded": <boolean>,
+  "ctScannerReserved": <boolean>,
+  "contrastPrep": {"needed": <boolean>, "type": "<IV|oral|none>", "allergyProtocol": <boolean>},
+  "radiologistOnCall": <boolean>,
+  "estimatedReadMinutes": <number>,
+  "confidence": <0-1>,
+  "reasoning": "<imaging preparation rationale>"
+}`,
+  },
+  {
+    name: "BillingAgent",
+    department: "Billing & Insurance",
+    systemPrompt: `You are a healthcare revenue cycle specialist and emergency department billing coordinator. You assess insurance coverage, estimate costs, identify authorization requirements, and ensure EMTALA compliance regardless of ability to pay. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `BILLING ASSESSMENT: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Patient information:\n${input.drawingDescription}` : ''}
+
+Prepare billing assessment.
+
+Respond with JSON:
+{
+  "emtalaApplies": <boolean>,
+  "estimatedCharges": <number>,
+  "anticipatedCPTCodes": ["<code1>", "<code2>"],
+  "authorizationNeeded": <boolean>,
+  "traumaActivationFee": <boolean>,
+  "estimatedInsuranceCoverage": "<percentage or status>",
+  "financialCounselingNeeded": <boolean>,
+  "confidence": <0-1>,
+  "reasoning": "<billing assessment rationale>"
+}`,
+  },
+  {
+    name: "MedComplianceAgent",
+    department: "Medical Compliance",
+    systemPrompt: `You are a healthcare compliance officer specializing in emergency medicine. You ensure EMTALA compliance, HIPAA adherence, mandatory reporting requirements, consent documentation, and regulatory compliance. You understand CMS Conditions of Participation. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `COMPLIANCE REVIEW: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Case information:\n${input.drawingDescription}` : ''}
+
+Assess compliance requirements.
+
+Respond with JSON:
+{
+  "emtalaCompliant": <boolean>,
+  "hipaaConsiderations": ["<consideration1>", "<consideration2>"],
+  "mandatoryReporting": {"required": <boolean>, "type": "<abuse|gunshot|communicable_disease|none>", "agency": "<reporting agency>"},
+  "consentRequired": "<implied_emergency|informed|guardian_needed>",
+  "documentationRequired": ["<doc1>", "<doc2>"],
+  "qualityMetrics": ["<metric1>", "<metric2>"],
+  "riskLevel": "<low|medium|high>",
+  "confidence": <0-1>,
+  "reasoning": "<compliance assessment rationale>"
+}`,
+  },
+  {
+    name: "MedReflectionAgent",
+    department: "QI & Reflection",
+    systemPrompt: `You are a quality improvement specialist and emergency medicine physician focused on continuous improvement. You assess the overall emergency response decision, identify system gaps, recommend process improvements, and evaluate response time optimization. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `QI REFLECTION: ${input.fileName}
+Severity: ${input.complexity || 5}/10
+Patients: ${input.quantity || 1}
+Scene type: ${input.material || 'Medical emergency'}
+${input.drawingDescription ? `Full case information:\n${input.drawingDescription}` : ''}
+
+Conduct quality improvement reflection.
+
+Respond with JSON:
+{
+  "responseEfficiency": <0-1>,
+  "bottlenecks": ["<bottleneck1>", "<bottleneck2>"],
+  "decisionQuality": "<high|adequate|poor>",
+  "doorToDoctorEstimate": "<minutes>",
+  "doorToCTEstimate": "<minutes if applicable>",
+  "protocolAdherence": "<full|partial|deviation>",
+  "lessonsLearned": ["<lesson1>", "<lesson2>"],
+  "systemImprovements": ["<improvement1>", "<improvement2>"],
+  "confidence": <0-1>,
+  "reasoning": "<QI reflection and analysis>"
+}`,
+  },
+];
+
 // ─── Core Engine ─────────────────────────────────────────────────────
 
 function buildMessages(systemPrompt: string, userPrompt: string, imageUrl?: string) {
@@ -653,6 +912,11 @@ export function getAgentsForDomain(domain: string): AgentDefinition[] {
     case 'kill_chain':
     case 'military':
       return DEFENSE_KILL_CHAIN_AGENTS; // 10 agents
+    case 'medical':
+    case 'medical_dispatch':
+    case 'healthcare':
+    case 'ems':
+      return MEDICAL_DISPATCH_AGENTS; // 10 agents
     default:
       return MANUFACTURING_AGENTS;
   }
@@ -699,10 +963,22 @@ export async function runAllAgents(input: AgentInput, domain: string = 'manufact
     const targetingData = agentResults.find(a => a.agentName === 'TargetingAgent')?.data || {};
     const isrData = agentResults.find(a => a.agentName === 'ISRAgent')?.data || {};
     summary = {
-      totalPrice: 0, // Not applicable for defense
+      totalPrice: 0,
       leadTimeDays: 0,
       riskLevel: String(isrData.threatClassification || targetingData.targetPriority || 'high'),
       complianceStatus: legalData.loacCompliance ? 'LOAC Compliant' : (legalData.recommendation === 'deny' ? 'NOT Authorized' : 'Review Required'),
+      confidence: Math.round(avgConfidence * 100) / 100,
+    };
+  } else if (domain === 'medical' || domain === 'medical_dispatch' || domain === 'healthcare' || domain === 'ems') {
+    const triageData = agentResults.find(a => a.agentName === 'TriageAgent')?.data || {};
+    const dispatchData = agentResults.find(a => a.agentName === 'DispatchAgent')?.data || {};
+    const complianceData = agentResults.find(a => a.agentName === 'MedComplianceAgent')?.data || {};
+    const billingData = agentResults.find(a => a.agentName === 'BillingAgent')?.data || {};
+    summary = {
+      totalPrice: Number(billingData.estimatedCharges) || 0,
+      leadTimeDays: Number(dispatchData.estimatedResponseMinutes) || 0, // repurposed as response minutes
+      riskLevel: `ESI-${triageData.esiLevel || '?'}`,
+      complianceStatus: complianceData.emtalaCompliant ? 'EMTALA Compliant' : 'Review Required',
       confidence: Math.round(avgConfidence * 100) / 100,
     };
   } else {

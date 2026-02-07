@@ -90,3 +90,12 @@
 - [x] Update UI to show defense-specific terminology and results
 - [x] Run live performance test on kill chain scenario (12.11s, 10 agents, 6.8x speed)
 - [x] Update vitest tests for defense domain agents (10 tests passing)
+
+## Medical Dispatch Domain
+- [x] Design medical dispatch agents (Triage, Dispatch, EMT/Paramedic, ER Prep, Pharmacy, Lab, Imaging, Billing, Compliance, Reflection)
+- [x] Implement medical dispatch agents in agents.ts with healthcare-specific LLM prompts
+- [x] Add domain-aware summary extraction for medical dispatch
+- [x] Add Medical Dispatch to frontend domain selector
+- [x] Update UI with medical-specific terminology, colors, and result display
+- [x] Run live performance test on medical dispatch scenario (10.51s, 10 agents, 7x speed)
+- [x] Write vitest tests for medical dispatch domain agents (11 tests passing)
