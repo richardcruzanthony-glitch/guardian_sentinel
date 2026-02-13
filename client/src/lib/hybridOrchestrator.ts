@@ -354,6 +354,23 @@ function calculateSummary(agents: AgentResult[], domain: string) {
     };
   }
 
+  // Legal domain
+  if (domain === 'legal' || domain === 'self_help_legal' || domain === 'legal_aid') {
+    const caseData = agents.find(a => a.agentName === 'CaseAnalysisAgent' && a.status === 'completed')?.data || {};
+    const damagesData = agents.find(a => a.agentName === 'DamagesAssessmentAgent' && a.status === 'completed')?.data || {};
+    const strategyData = agents.find(a => a.agentName === 'StrategyAgent' && a.status === 'completed')?.data || {};
+    const filingData = agents.find(a => a.agentName === 'FilingRequirementsAgent' && a.status === 'completed')?.data || {};
+    const complianceData = agents.find(a => a.agentName === 'LegalComplianceAgent' && a.status === 'completed')?.data || {};
+    const reflectionData = agents.find(a => a.agentName === 'LegalReflectionAgent' && a.status === 'completed')?.data || {};
+    return {
+      totalPrice: Number(damagesData.totalEstimatedRecovery) || Number((damagesData.compensatoryDamages as any)?.amount) || 0,
+      leadTimeDays: 0,
+      riskLevel: String(reflectionData.overallCaseStrength || caseData.strengthAssessment || strategyData.recommendedApproach || 'pending'),
+      complianceStatus: complianceData.courtRulesCompliance === 'compliant' ? 'Court Ready' : (filingData.filingCourt ? 'Filing Ready' : 'Review Required'),
+      confidence: Math.round(avgConfidence * 100) / 100,
+    };
+  }
+
   // Manufacturing default
   const salesData = agents.find(a => a.agentName === 'SalesAgent' && a.status === 'completed')?.data || {};
   const costData = agents.find(a => a.agentName === 'CostAgent' && a.status === 'completed')?.data || {};

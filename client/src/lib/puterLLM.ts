@@ -33,9 +33,22 @@ export interface PuterLLMResult {
   model: string;
 }
 
-/** Check if Puter.js is available and loaded */
+/** Track whether Puter.js has been verified to work (not just loaded) */
+let puterVerified: boolean | null = null;
+let puterVerifying = false;
+
+/** Check if Puter.js is available and can actually make calls */
 export function isPuterAvailable(): boolean {
+  // If we've already verified, use cached result
+  if (puterVerified !== null) return puterVerified;
+  // Basic check — is the SDK loaded?
   return !!(window.puter?.ai?.chat);
+}
+
+/** Mark Puter as verified working or not */
+export function setPuterVerified(works: boolean): void {
+  puterVerified = works;
+  console.log(`[Ara] Puter.js verified: ${works ? 'operational' : 'unavailable — routing all through backend'}`);
 }
 
 /** Available models through Puter — fast and free */

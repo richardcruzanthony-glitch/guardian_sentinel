@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight, Crosshair, Factory, Ambulance, Brain, Layers, RefreshCw } from "lucide-react";
+import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight, Crosshair, Factory, Ambulance, Brain, Layers, RefreshCw, Scale, FileText, Download } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useState, useCallback, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
@@ -9,7 +9,7 @@ import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualiz
 import { CompliancePackage } from "@/components/CompliancePackage";
 import { runHybridProcessing, type AgentResult, type HybridProcessingResult } from "@/lib/hybridOrchestrator";
 
-type Domain = 'manufacturing' | 'defense' | 'medical';
+type Domain = 'manufacturing' | 'defense' | 'medical' | 'legal';
 
 const DOMAIN_CONFIG = {
   manufacturing: {
@@ -94,7 +94,44 @@ const DOMAIN_CONFIG = {
     paramLabel3: 'Patients',
     summaryLabels: { price: 'Est. Charges', time: 'Response Time', risk: 'ESI Level', compliance: 'EMTALA' },
   },
+  legal: {
+    label: 'Self-Help Legal',
+    icon: Scale,
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500',
+    description: 'Describe your legal situation or upload documents. Ara coordinates Case Analysis, Precedent Research, Statute & Code, Document Drafting, Filing Requirements, Compliance, Strategy, Damages, and Reflection',
+    uploadLabel: 'Describe Your Legal Situation',
+    uploadHint: 'Upload contracts, leases, court papers, or photos of documents',
+    acceptTypes: 'image/*,.pdf,.doc,.docx,.txt',
+    processLabel: 'Ara — Analyze & Draft Filing Documents',
+    traditionalSteps: [
+      { dept: 'Initial Consultation', time: '1-2 hours' },
+      { dept: 'Case Research', time: '2-5 days' },
+      { dept: 'Precedent Analysis', time: '1-3 days' },
+      { dept: 'Statute Review', time: '1-2 days' },
+      { dept: 'Document Drafting', time: '3-7 days' },
+      { dept: 'Compliance Review', time: '1-2 days' },
+      { dept: 'Filing Preparation', time: '1-2 days' },
+      { dept: 'Attorney Review', time: '1-3 days' },
+    ],
+    traditionalTotal: '2-4 weeks ($2,000-5,000)',
+    guardianDepts: ['Case', 'Precedent', 'Statute', 'Draft', 'Filing', 'Comply', 'Strategy', 'Damages', 'Reflect'],
+    paramLabel1: 'State/Jurisdiction',
+    paramLabel2: 'Urgency',
+    paramLabel3: 'Parties Involved',
+    summaryLabels: { price: 'Est. Recovery', time: 'Filing Deadline', risk: 'Case Strength', compliance: 'Court Ready' },
+  },
 };
+
+const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
+  'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
+  'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico',
+  'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
+  'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+  'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming', 'District of Columbia',
+];
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -106,12 +143,20 @@ export default function Home() {
   const [material, setMaterial] = useState('Aluminum 6061-T6');
   const [threatEnv, setThreatEnv] = useState('Contested multi-domain');
   const [sceneType, setSceneType] = useState('Trauma - MVC');
+  const [legalState, setLegalState] = useState('California');
+  const [legalCounty, setLegalCounty] = useState('');
+  const [legalDescription, setLegalDescription] = useState('');
+  const [legalFiles, setLegalFiles] = useState<File[]>([]);
+  const [legalFilePreview, setLegalFilePreview] = useState<string | null>(null);
   const [scenarioText, setScenarioText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingResult, setProcessingResult] = useState<any>(null);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [processingStage, setProcessingStage] = useState<string>('');
   const [liveAgentStatuses, setLiveAgentStatuses] = useState<Map<string, AgentStatus>>(new Map());
+  const [accessCode, setAccessCode] = useState('');
+  const [accessGranted, setAccessGranted] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
 
   const config = DOMAIN_CONFIG[domain];
   const DomainIcon = config.icon;
@@ -164,8 +209,21 @@ export default function Home() {
     }
   }, []);
 
-  // Manufacturing requires file upload; defense and medical use text scenarios only
-  const canProcess = domain === 'manufacturing' ? !!selectedFile : scenarioText.trim().length > 10;
+  const handleLegalFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setLegalFiles(prev => [...prev, ...files]);
+      const imageFile = files.find(f => f.type.startsWith('image/'));
+      if (imageFile) {
+        setLegalFilePreview(URL.createObjectURL(imageFile));
+      }
+    }
+  }, []);
+
+  // Manufacturing requires file upload; defense and medical use text scenarios; legal uses description
+  const canProcess = domain === 'manufacturing' ? !!selectedFile 
+    : domain === 'legal' ? (legalDescription.trim().length > 20 || legalFiles.length > 0)
+    : scenarioText.trim().length > 10;
 
   const handleProcess = async () => {
     if (!canProcess) return;
@@ -173,11 +231,11 @@ export default function Home() {
     setIsProcessing(true);
     setProcessingResult(null);
     setLiveAgentStatuses(new Map());
-    setProcessingStage(domain === 'manufacturing' ? 'Uploading drawing...' : 'Ara is coordinating all departments...');
+    setProcessingStage(domain === 'manufacturing' ? 'Uploading drawing...' : domain === 'legal' ? 'Ara is analyzing your legal situation...' : 'Ara is coordinating all departments...');
 
     try {
       let imageUrl: string | undefined;
-      let fileName = selectedFile?.name || (domain === 'medical' ? 'medical-dispatch.txt' : 'scenario-briefing.txt');
+      let fileName = selectedFile?.name || (domain === 'medical' ? 'medical-dispatch.txt' : domain === 'legal' ? 'legal-case.txt' : 'scenario-briefing.txt');
 
       // Upload image only for manufacturing domain
       if (domain === 'manufacturing' && selectedFile?.type.startsWith('image/')) {
@@ -202,6 +260,33 @@ export default function Home() {
       // For text-based domains, use scenario text as the file name
       if ((domain === 'defense' || domain === 'medical') && scenarioText) {
         fileName = scenarioText.substring(0, 200);
+      }
+
+      // For legal domain, use the description as the scenario
+      if (domain === 'legal' && legalDescription) {
+        fileName = `[${legalState}${legalCounty ? `, ${legalCounty}` : ''}] ${legalDescription.substring(0, 200)}`;
+      }
+
+      // Upload legal documents if any
+      if (domain === 'legal' && legalFiles.length > 0) {
+        const imageFile = legalFiles.find(f => f.type.startsWith('image/'));
+        if (imageFile) {
+          setProcessingStage('Uploading legal documents...');
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve) => {
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result.split(',')[1]);
+            };
+            reader.readAsDataURL(imageFile);
+          });
+          const uploadResult = await uploadMutation.mutateAsync({
+            fileName: imageFile.name,
+            fileData: base64,
+            contentType: imageFile.type,
+          });
+          imageUrl = uploadResult.url;
+        }
       }
 
       setProcessingStage('Ara is coordinating all departments simultaneously...');
@@ -234,11 +319,11 @@ export default function Home() {
           fileName,
           fileSize: selectedFile?.size || scenarioText.length,
           complexity,
-          material: domain === 'defense' ? threatEnv : domain === 'medical' ? sceneType : material,
+          material: domain === 'defense' ? threatEnv : domain === 'medical' ? sceneType : domain === 'legal' ? legalState : material,
           quantity,
           imageUrl,
           domain,
-          scenarioText: domain !== 'manufacturing' ? scenarioText : undefined,
+          scenarioText: domain === 'legal' ? `State: ${legalState}${legalCounty ? `\nCounty: ${legalCounty}` : ''}\n\nSituation: ${legalDescription}` : domain !== 'manufacturing' ? scenarioText : undefined,
         },
         backendProcessFn,
         onAgentStatus,
@@ -330,6 +415,17 @@ export default function Home() {
                 <Ambulance className="w-3 h-3" />
                 Medical
               </button>
+              <button
+                onClick={() => handleDomainSwitch('legal')}
+                className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                  domain === 'legal' 
+                    ? 'bg-purple-500 text-white' 
+                    : 'bg-card text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Scale className="w-3 h-3" />
+                Legal
+              </button>
             </div>
 
             {isAuthenticated ? (
@@ -353,6 +449,7 @@ export default function Home() {
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${
               domain === 'defense' ? 'border-red-500/30 bg-red-500/5 text-red-400' 
               : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5 text-blue-400'
+              : domain === 'legal' ? 'border-purple-500/30 bg-purple-500/5 text-purple-400'
               : 'border-accent/30 bg-accent/5 text-accent'
             } text-xs font-medium`}>
               <Brain className="w-3 h-3" />
@@ -363,6 +460,8 @@ export default function Home() {
                 <>Every Kill Chain Node.<br /><span className="text-red-400">Simultaneously.</span></>
               ) : domain === 'medical' ? (
                 <>Every Department.<br /><span className="text-blue-400">Simultaneously.</span></>
+              ) : domain === 'legal' ? (
+                <>Every Legal Department.<br /><span className="text-purple-400">Simultaneously.</span></>
               ) : (
                 <>Every Department.<br /><span className="text-accent">Simultaneously.</span></>
               )}
@@ -450,6 +549,8 @@ export default function Home() {
                 <FileImage className="w-5 h-5 text-accent" />
               ) : domain === 'defense' ? (
                 <Crosshair className="w-5 h-5 text-red-400" />
+              ) : domain === 'legal' ? (
+                <Scale className="w-5 h-5 text-purple-400" />
               ) : (
                 <Ambulance className="w-5 h-5 text-blue-400" />
               )}
@@ -491,6 +592,60 @@ export default function Home() {
                     <p className="text-sm text-muted-foreground text-center">Drawing preview will appear here</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Legal: Description + Document Upload */}
+            {domain === 'legal' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">Describe Your Legal Situation</label>
+                  <textarea
+                    value={legalDescription}
+                    onChange={(e) => setLegalDescription(e.target.value)}
+                    placeholder="Describe your legal issue in plain language... e.g., 'My landlord is refusing to return my $3,200 security deposit after I moved out of my apartment in Los Angeles. The lease ended on January 15, 2026. I left the apartment in good condition with photos to prove it. The landlord has not provided an itemized list of deductions within 21 days as required.'"
+                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm min-h-[140px] resize-y placeholder:text-muted-foreground/50"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    className="border-2 border-dashed border-purple-500/30 rounded-lg p-4 text-center cursor-pointer transition-all hover:border-purple-500 hover:bg-purple-500/5"
+                  >
+                    <input
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx,.txt"
+                      onChange={handleLegalFileSelect}
+                      className="hidden"
+                      id="legal-file-input"
+                      multiple
+                    />
+                    <label htmlFor="legal-file-input" className="cursor-pointer">
+                      <FileText className="w-8 h-8 text-purple-400/60 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-foreground mb-1">
+                        {legalFiles.length > 0 ? `${legalFiles.length} document(s) uploaded` : 'Upload Supporting Documents'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Contracts, leases, court papers, letters, photos (optional)</p>
+                    </label>
+                  </div>
+                  {legalFilePreview ? (
+                    <div className="border border-purple-500/30 rounded-lg overflow-hidden bg-white">
+                      <img src={legalFilePreview} alt="Document Preview" className="w-full h-full object-contain max-h-48" />
+                    </div>
+                  ) : legalFiles.length > 0 ? (
+                    <div className="border border-purple-500/30 rounded-lg p-4 bg-card/30 space-y-2">
+                      {legalFiles.map((f, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <FileText className="w-3 h-3 text-purple-400" />
+                          <span className="truncate">{f.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border border-border rounded-lg p-4 flex items-center justify-center bg-card/30">
+                      <p className="text-xs text-muted-foreground text-center">Document previews will appear here</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -543,6 +698,33 @@ export default function Home() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground">Patients</label>
                     <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm" />
+                  </div>
+                </>
+              ) : domain === 'legal' ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">State / Jurisdiction</label>
+                    <select
+                      value={legalState}
+                      onChange={(e) => setLegalState(e.target.value)}
+                      className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm"
+                    >
+                      {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">County</label>
+                    <input
+                      type="text"
+                      value={legalCounty}
+                      onChange={(e) => setLegalCounty(e.target.value)}
+                      placeholder="e.g., Los Angeles County"
+                      className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Urgency ({complexity}/10)</label>
+                    <input type="range" min="1" max="10" value={complexity} onChange={(e) => setComplexity(Number(e.target.value))} className="w-full accent-purple-500" />
                   </div>
                 </>
               ) : domain === 'manufacturing' ? (
@@ -603,6 +785,66 @@ export default function Home() {
               )}
             </div>
 
+            {/* Legal Access Gate */}
+            {domain === 'legal' && !accessGranted && (
+              <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-purple-300">Guardian Legal Services</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Full case analysis is free. To unlock downloadable court documents and filing packages, enter your access code below.
+                </p>
+                {showCodeInput ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={accessCode}
+                      onChange={(e) => setAccessCode(e.target.value)}
+                      placeholder="Enter access code"
+                      className="flex-1 px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && accessCode.toLowerCase().trim() === 'guardian') {
+                          setAccessGranted(true);
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      className="bg-purple-500 hover:bg-purple-600 text-white"
+                      onClick={() => {
+                        if (accessCode.toLowerCase().trim() === 'guardian') {
+                          setAccessGranted(true);
+                        }
+                      }}
+                    >
+                      Unlock
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="text-purple-400 border-purple-500/30" onClick={() => setShowCodeInput(true)}>
+                      I have a code
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-muted-foreground border-border" disabled>
+                      Purchase access — coming soon
+                    </Button>
+                  </div>
+                )}
+                {accessGranted && (
+                  <p className="text-xs text-green-400 flex items-center gap-1">
+                    <Shield className="w-3 h-3" /> Full document access unlocked
+                  </p>
+                )}
+              </div>
+            )}
+            {domain === 'legal' && accessGranted && (
+              <div className="p-3 rounded-lg border border-green-500/30 bg-green-500/5 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-green-400">Full document access unlocked — court documents will be available for download</span>
+              </div>
+            )}
+
             {/* Process Button */}
             <Button
               onClick={handleProcess}
@@ -610,6 +852,7 @@ export default function Home() {
               className={`w-full font-semibold ${
                 domain === 'defense' ? 'bg-red-500 hover:bg-red-600 text-white' 
                 : domain === 'medical' ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                : domain === 'legal' ? 'bg-purple-500 hover:bg-purple-600 text-white'
                 : 'bg-accent hover:bg-accent/90 text-accent-foreground'}`}
               size="lg"
             >
@@ -620,7 +863,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  {domain === 'defense' ? <Crosshair className="w-4 h-4 mr-2" /> : domain === 'medical' ? <Ambulance className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                  {domain === 'defense' ? <Crosshair className="w-4 h-4 mr-2" /> : domain === 'medical' ? <Ambulance className="w-4 h-4 mr-2" /> : domain === 'legal' ? <Scale className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
                   {config.processLabel}
                 </>
               )}
@@ -655,7 +898,7 @@ export default function Home() {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Improvement</p>
                   <p className="text-3xl font-bold" style={{ color: domain === 'defense' ? '#FF4444' : domain === 'medical' ? '#60A5FA' : '#00FF41' }}>
-                    {domain === 'manufacturing' ? '99.8%' : domain === 'defense' ? '99.6%' : '99.4%'}
+                    {domain === 'manufacturing' ? '99.8%' : domain === 'defense' ? '99.6%' : domain === 'legal' ? '99.5%' : '99.4%'}
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-1">time reduction</p>
                 </div>
@@ -667,7 +910,7 @@ export default function Home() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className={`w-5 h-5 ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`} />
-                  {domain === 'defense' ? 'Ara — Kill Chain Coordination' : domain === 'medical' ? 'Ara — Emergency Response Coordination' : 'Ara — Department Coordination'}
+                  {domain === 'defense' ? 'Ara — Kill Chain Coordination' : domain === 'medical' ? 'Ara — Emergency Response Coordination' : domain === 'legal' ? 'Ara — Legal Analysis Coordination' : 'Ara — Department Coordination'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -685,7 +928,7 @@ export default function Home() {
             {processingResult.drawingAnalysis && (
               <Card className="border-border bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle>{domain === 'defense' ? 'Intelligence Assessment' : domain === 'medical' ? 'Patient Assessment' : 'Drawing Analysis'}</CardTitle>
+                  <CardTitle>{domain === 'defense' ? 'Intelligence Assessment' : domain === 'medical' ? 'Patient Assessment' : domain === 'legal' ? 'Case Situation Analysis' : 'Drawing Analysis'}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
@@ -728,6 +971,44 @@ export default function Home() {
                     <p className="text-xl font-bold text-foreground">
                       ${processingResult.summary.totalPrice ? processingResult.summary.totalPrice.toLocaleString() : '—'}
                     </p>
+                  </div>
+                </>
+              ) : domain === 'legal' ? (
+                <>
+                  <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Case Viability</p>
+                    <p className={`text-xl font-bold ${
+                      processingResult.summary.riskLevel === 'strong' ? 'text-green-400' :
+                      processingResult.summary.riskLevel === 'moderate' ? 'text-yellow-400' :
+                      processingResult.summary.riskLevel === 'weak' ? 'text-red-400' : 'text-purple-400'
+                    }`}>
+                      {processingResult.summary.riskLevel ? processingResult.summary.riskLevel.charAt(0).toUpperCase() + processingResult.summary.riskLevel.slice(1) : 'Analyzing...'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">cross-department assessment</p>
+                  </div>
+                  <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Est. Recovery</p>
+                    <p className="text-xl font-bold text-purple-400">
+                      {processingResult.summary.totalPrice ? `$${processingResult.summary.totalPrice.toLocaleString()}` : 'Calculating...'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">damages assessment</p>
+                  </div>
+                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Court Status</p>
+                    <p className={`text-xl font-bold ${
+                      processingResult.summary.complianceStatus === 'Court Ready' ? 'text-green-400' :
+                      processingResult.summary.complianceStatus === 'Filing Ready' ? 'text-yellow-400' : 'text-orange-400'
+                    }`}>
+                      {processingResult.summary.complianceStatus || 'Reviewing...'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">filing compliance</p>
+                  </div>
+                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Confidence</p>
+                    <p className="text-xl font-bold text-foreground">
+                      {(processingResult.summary.confidence * 100).toFixed(0)}%
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{processingResult.agentCount} departments analyzed</p>
                   </div>
                 </>
               ) : domain === 'defense' ? (
@@ -814,10 +1095,91 @@ export default function Home() {
               <CompliancePackage result={processingResult} domain={domain} />
             )}
 
+            {/* Legal Domain — Document Package & Disclaimer */}
+            {domain === 'legal' && (
+              <div className="space-y-4">
+                {/* Legal Disclaimer */}
+                <div className="p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="w-4 h-4 text-yellow-400" />
+                    <span className="text-sm font-medium text-yellow-300">Important Legal Disclaimer</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    This analysis is generated by Guardian OS for informational purposes only and does not constitute legal advice. 
+                    Guardian OS is not a law firm and does not provide legal representation. The documents generated are templates 
+                    based on AI analysis and should be reviewed before filing. For complex legal matters, consult a licensed attorney 
+                    in your jurisdiction. Use of this service does not create an attorney-client relationship.
+                  </p>
+                </div>
+
+                {/* Document Download Section — Only if access granted */}
+                {accessGranted && (
+                  <Card className="border-purple-500/30 bg-purple-500/5">
+                    <CardHeader>
+                      <CardTitle className="text-purple-300 flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Court Filing Document Package
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-xs text-muted-foreground">Your documents have been drafted based on the case analysis. Review each document before filing.</p>
+                      {processingResult.agents
+                        .filter((a: any) => a.department === 'Document Drafting' && a.status === 'completed')
+                        .map((a: any) => (
+                          <div key={a.agentName} className="space-y-2">
+                            {a.data?.documentsNeeded && (
+                              <div className="grid gap-2">
+                                {(a.data.documentsNeeded as string[]).map((doc: string, i: number) => (
+                                  <div key={i} className="flex items-center justify-between p-3 rounded border border-border bg-background">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="w-4 h-4 text-purple-400" />
+                                      <span className="text-sm">{doc}</span>
+                                    </div>
+                                    <Button size="sm" variant="outline" className="text-purple-400 border-purple-500/30 gap-1">
+                                      <Download className="w-3 h-3" /> PDF
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <Button className="w-full bg-purple-500 hover:bg-purple-600 text-white gap-2 mt-2">
+                              <Download className="w-4 h-4" /> Download Complete Filing Package
+                            </Button>
+                          </div>
+                        ))}
+                      {processingResult.agents
+                        .filter((a: any) => a.department === 'Filing Requirements' && a.status === 'completed')
+                        .map((a: any) => (
+                          <div key={a.agentName} className="mt-4 p-3 rounded border border-border bg-background">
+                            <p className="text-sm font-medium text-foreground mb-2">Filing Information</p>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {a.data?.filingCourt && <div><span className="text-muted-foreground">Court:</span> <span className="text-foreground">{String(a.data.filingCourt)}</span></div>}
+                              {a.data?.filingFee && <div><span className="text-muted-foreground">Filing Fee:</span> <span className="text-foreground">{String(a.data.filingFee)}</span></div>}
+                              {a.data?.filingDeadline && <div><span className="text-muted-foreground">Deadline:</span> <span className="text-foreground">{String(a.data.filingDeadline)}</span></div>}
+                              {a.data?.filingMethod && <div><span className="text-muted-foreground">Method:</span> <span className="text-foreground">{String(a.data.filingMethod)}</span></div>}
+                            </div>
+                          </div>
+                        ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Prompt to unlock if not granted */}
+                {!accessGranted && (
+                  <div className="p-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Enter your access code above to unlock downloadable court documents and filing packages.</p>
+                    <Button size="sm" variant="outline" className="text-purple-400 border-purple-500/30" onClick={() => setShowCodeInput(true)}>
+                      Unlock Documents
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Individual Agent Results — Expandable */}
             <Card className="border-border bg-card/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>{domain === 'defense' ? 'Kill Chain Node Reports' : domain === 'medical' ? 'Emergency Response Department Reports' : 'Department Reports'}</CardTitle>
+                <CardTitle>{domain === 'defense' ? 'Kill Chain Node Reports' : domain === 'medical' ? 'Emergency Response Department Reports' : domain === 'legal' ? 'Legal Analysis Department Reports' : 'Department Reports'}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {processingResult.agents.map((agent: any) => (

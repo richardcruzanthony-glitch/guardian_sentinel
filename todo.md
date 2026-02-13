@@ -142,3 +142,20 @@
 - [x] Update tRPC to support hybrid routing — frontend calls Puter directly, backend handles heavy/vision
 - [x] Silent reroute — if Puter fails on frontend, fall back to backend Manus silently
 - [x] Manus monitors and takes over if frontend provider has issues
+
+## Self-Help Legal Domain
+- [ ] Define legal domain agents (Case Analysis, Precedent, Statute, Document Drafting, Filing Requirements, Compliance, Strategy, Reflection)
+- [x] Add legal agents to shared agentDefinitions.ts
+- [x] Add legal agents to backend agents.ts
+- [x] Build conversational legal intake UI — dynamic prompting based on legal issue type
+- [x] State selection with jurisdiction-specific logic
+- [ ] PDF generation for court filing documents
+- [x] Integrate legal domain tab in Home.tsx
+- [x] Add legal disclaimer ("This is not legal advice")
+- [ ] Downloadable PDF package with completed court forms
+- [x] Document upload support (photos/PDFs of contracts, leases, court papers) for legal domain
+- [ ] Ara extracts facts from uploaded legal documents before prompting follow-up questions
+- [x] Legal domain access gate — paid service, free with code "guardian"
+- [x] Code input UI before processing (can swap to link-based codes later)
+- [x] Add county input field to legal domain (courts are county-level)
+- [x] Pass county to agent prompts for jurisdiction-specific filing

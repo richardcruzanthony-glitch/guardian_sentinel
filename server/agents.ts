@@ -826,6 +826,215 @@ Respond with JSON:
   },
 ];
 
+// ─── Self-Help Legal Domain Agents ──────────────────────────────────
+
+const LEGAL_AGENTS: AgentDefinition[] = [
+  {
+    name: "CaseAnalysisAgent",
+    department: "Case Analysis",
+    taskWeight: 'standard' as TaskWeight,
+    systemPrompt: `You are a senior legal analyst specializing in self-help law. Analyze the legal situation described, identify the type of case (contract dispute, landlord-tenant, family law, small claims, employment, personal injury, etc.), determine applicable legal theories, and assess the strength of the case. Consider the specific state jurisdiction. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Analyze this legal situation in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+Urgency: ${input.complexity || 5}/10, Parties involved: ${input.quantity || 2}
+
+Respond with JSON:
+{
+  "caseType": "<type of legal case>",
+  "legalTheories": ["<theory1>", "<theory2>"],
+  "jurisdiction": "<state and applicable court>",
+  "keyFacts": ["<fact1>", "<fact2>"],
+  "strengthAssessment": "<strong|moderate|weak>",
+  "criticalIssues": ["<issue1>", "<issue2>"],
+  "recommendedCourt": "<specific court type>",
+  "confidence": <0-1>,
+  "reasoning": "<detailed case analysis>"
+}`,
+  },
+  {
+    name: "PrecedentResearchAgent",
+    department: "Precedent Research",
+    taskWeight: 'heavy' as TaskWeight,
+    systemPrompt: `You are a legal research specialist. Find and analyze relevant case precedents for the described legal situation. Focus on the specific state jurisdiction. Identify landmark cases, recent rulings, and applicable legal standards that support the case. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Research legal precedents for this case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+
+Respond with JSON:
+{
+  "relevantCases": [{"name": "<case name>", "citation": "<citation>", "relevance": "<how it applies>", "outcome": "<ruling>"}],
+  "legalStandards": ["<standard1>", "<standard2>"],
+  "favorablePrecedents": <number>,
+  "unfavorablePrecedents": <number>,
+  "keyLegalPrinciples": ["<principle1>", "<principle2>"],
+  "confidence": <0-1>,
+  "reasoning": "<precedent analysis summary>"
+}`,
+  },
+  {
+    name: "StatuteCodeAgent",
+    department: "Statute & Code",
+    taskWeight: 'standard' as TaskWeight,
+    systemPrompt: `You are a statutory law expert. Identify all applicable state and federal statutes, codes, and regulations for the described legal situation. Provide specific section numbers and their relevance. Focus on the specific state jurisdiction provided. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Identify applicable statutes for this case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+
+Respond with JSON:
+{
+  "stateStatutes": [{"code": "<statute number>", "title": "<name>", "relevance": "<how it applies>"}],
+  "federalStatutes": [{"code": "<statute number>", "title": "<name>", "relevance": "<how it applies>"}],
+  "regulatoryRequirements": ["<req1>", "<req2>"],
+  "statuteOfLimitations": "<applicable time limit>",
+  "keyProvisions": ["<provision1>", "<provision2>"],
+  "confidence": <0-1>,
+  "reasoning": "<statutory analysis>"
+}`,
+  },
+  {
+    name: "DocumentDraftingAgent",
+    department: "Document Drafting",
+    taskWeight: 'heavy' as TaskWeight,
+    systemPrompt: `You are a legal document drafting specialist. Draft the necessary court documents for the described legal situation, including complaints, motions, petitions, or demand letters as appropriate. Use proper legal formatting and language for the specific state jurisdiction. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Draft legal documents for this case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+Parties involved: ${input.quantity || 2}
+
+Respond with JSON:
+{
+  "documentsNeeded": ["<doc type 1>", "<doc type 2>"],
+  "primaryDocument": {
+    "type": "<document type>",
+    "title": "<formal title>",
+    "content": "<full document text with proper legal formatting>",
+    "courtHeader": "<court name and jurisdiction>"
+  },
+  "supportingDocuments": [{"type": "<type>", "purpose": "<why needed>", "content": "<document text>"}],
+  "demandLetter": {
+    "included": <true/false>,
+    "content": "<demand letter text if applicable>"
+  },
+  "confidence": <0-1>,
+  "reasoning": "<drafting strategy explanation>"
+}`,
+  },
+  {
+    name: "FilingRequirementsAgent",
+    department: "Filing Requirements",
+    taskWeight: 'standard' as TaskWeight,
+    systemPrompt: `You are a court filing specialist. Determine all filing requirements for the described legal situation in the specific state jurisdiction — including fees, deadlines, required forms, service requirements, and procedural rules. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Determine filing requirements for this case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+
+Respond with JSON:
+{
+  "filingCourt": "<specific court name>",
+  "filingFee": "<amount or fee waiver info>",
+  "requiredForms": [{"form": "<form name/number>", "purpose": "<why needed>"}],
+  "filingDeadline": "<deadline or statute of limitations>",
+  "serviceRequirements": "<how to serve the other party>",
+  "filingMethod": "<in-person, e-filing, mail>",
+  "feeWaiverAvailable": <true/false>,
+  "additionalSteps": ["<step1>", "<step2>"],
+  "confidence": <0-1>,
+  "reasoning": "<filing requirements analysis>"
+}`,
+  },
+  {
+    name: "LegalComplianceAgent",
+    department: "Legal Compliance",
+    taskWeight: 'standard' as TaskWeight,
+    systemPrompt: `You are a legal compliance and ethics specialist. Ensure all documents and strategies comply with court rules, formatting requirements, ethical obligations, and procedural requirements. Add required disclaimers. Verify the case meets jurisdictional requirements. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Review compliance for this legal case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+
+Respond with JSON:
+{
+  "courtRulesCompliance": "<compliant|needs_revision|non_compliant>",
+  "formattingRequirements": ["<req1>", "<req2>"],
+  "requiredDisclaimers": ["<disclaimer1>", "<disclaimer2>"],
+  "jurisdictionalCheck": "<confirmed|issue_found>",
+  "ethicalConsiderations": ["<consideration1>", "<consideration2>"],
+  "selfRepresentationRules": "<applicable pro se rules>",
+  "confidence": <0-1>,
+  "reasoning": "<compliance review summary>"
+}`,
+  },
+  {
+    name: "StrategyAgent",
+    department: "Strategy",
+    taskWeight: 'standard' as TaskWeight,
+    systemPrompt: `You are a legal strategy advisor. Develop the optimal legal strategy for the described situation — including recommended approach, timeline, negotiation tactics, and alternative dispute resolution options. Consider the specific state jurisdiction and the self-represented nature of the case. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Develop legal strategy for this case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+Urgency: ${input.complexity || 5}/10
+
+Respond with JSON:
+{
+  "recommendedApproach": "<litigation|negotiation|mediation|arbitration|demand_letter_first>",
+  "strategyOutline": ["<step1>", "<step2>", "<step3>"],
+  "timeline": "<expected timeline>",
+  "negotiationTactics": ["<tactic1>", "<tactic2>"],
+  "alternativeOptions": ["<option1>", "<option2>"],
+  "strengthsToLeverage": ["<strength1>", "<strength2>"],
+  "weaknessesToAddress": ["<weakness1>", "<weakness2>"],
+  "settlementRange": "<estimated range if applicable>",
+  "confidence": <0-1>,
+  "reasoning": "<strategy rationale>"
+}`,
+  },
+  {
+    name: "DamagesAssessmentAgent",
+    department: "Damages Assessment",
+    taskWeight: 'standard' as TaskWeight,
+    systemPrompt: `You are a damages assessment specialist. Calculate and document all potential damages, remedies, and recovery amounts for the described legal situation. Include compensatory, statutory, and punitive damages where applicable under the specific state law. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Assess damages for this case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+
+Respond with JSON:
+{
+  "compensatoryDamages": "<estimated amount or range>",
+  "statutoryDamages": "<if applicable under state law>",
+  "punitiveDamages": "<if applicable>",
+  "totalEstimatedRecovery": "<range>",
+  "damageCategories": [{"type": "<type>", "amount": "<estimate>", "basis": "<legal basis>"}],
+  "mitigationFactors": ["<factor1>", "<factor2>"],
+  "courtCosts": "<estimated recoverable costs>",
+  "confidence": <0-1>,
+  "reasoning": "<damages calculation methodology>"
+}`,
+  },
+  {
+    name: "LegalReflectionAgent",
+    department: "Reflection & Cross-Validation",
+    taskWeight: 'heavy' as TaskWeight,
+    systemPrompt: `You are the meta-analysis layer for a parallel legal analysis system. All other legal departments have analyzed the same case simultaneously. Your job is to cross-validate their findings, identify inconsistencies, flag risks they may have missed, and synthesize a unified legal action plan. You ensure the self-represented person has a coherent, actionable path forward. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Cross-validate all legal department analyses for this case in ${input.material || 'California'}:
+"${input.fileName}"
+${input.drawingDescription ? `Additional details:\n${input.drawingDescription}` : ''}
+
+Respond with JSON:
+{
+  "overallCaseStrength": "<strong|moderate|weak>",
+  "consistencyCheck": "<all_aligned|minor_discrepancies|major_conflicts>",
+  "criticalWarnings": ["<warning1>", "<warning2>"],
+  "unifiedActionPlan": ["<step1>", "<step2>", "<step3>"],
+  "immediateNextSteps": ["<action1>", "<action2>"],
+  "estimatedRecovery": "<synthesized range>",
+  "estimatedTimeline": "<synthesized timeline>",
+  "disclaimer": "This analysis is for informational purposes only and does not constitute legal advice. Consult a licensed attorney for legal counsel.",
+  "confidence": <0-1>,
+  "reasoning": "<meta-analysis and cross-validation summary>"
+}`,
+  },
+];
+
 // ─── Core Engine ─────────────────────────────────────────────────────
 
 function buildMessages(systemPrompt: string, userPrompt: string, imageUrl?: string) {
@@ -969,6 +1178,10 @@ export function getAgentsForDomain(domain: string): AgentDefinition[] {
     case 'healthcare':
     case 'ems':
       return MEDICAL_DISPATCH_AGENTS; // 10 agents
+    case 'legal':
+    case 'self_help_legal':
+    case 'legal_aid':
+      return LEGAL_AGENTS; // 9 agents
     default:
       return MANUFACTURING_AGENTS;
   }
@@ -1027,6 +1240,21 @@ export async function runAllAgents(input: AgentInput, domain: string = 'manufact
       leadTimeDays: 0,
       riskLevel: String(isrData.threatClassification || targetingData.targetPriority || 'high'),
       complianceStatus: legalData.loacCompliance ? 'LOAC Compliant' : (legalData.recommendation === 'deny' ? 'NOT Authorized' : 'Review Required'),
+      confidence: Math.round(avgConfidence * 100) / 100,
+    };
+  } else if (domain === 'legal' || domain === 'self_help_legal' || domain === 'legal_aid') {
+    const caseData = agentResults.find(a => a.agentName === 'CaseAnalysisAgent' && a.status === 'completed')?.data || {};
+    const precedentData = agentResults.find(a => a.agentName === 'PrecedentResearchAgent' && a.status === 'completed')?.data || {};
+    const damagesData = agentResults.find(a => a.agentName === 'DamagesAssessmentAgent' && a.status === 'completed')?.data || {};
+    const strategyData = agentResults.find(a => a.agentName === 'StrategyAgent' && a.status === 'completed')?.data || {};
+    const filingData = agentResults.find(a => a.agentName === 'FilingRequirementsAgent' && a.status === 'completed')?.data || {};
+    const complianceData = agentResults.find(a => a.agentName === 'LegalComplianceAgent' && a.status === 'completed')?.data || {};
+    const reflectionData = agentResults.find(a => a.agentName === 'LegalReflectionAgent' && a.status === 'completed')?.data || {};
+    summary = {
+      totalPrice: Number(damagesData.totalEstimatedRecovery) || Number((damagesData.compensatoryDamages as any)?.amount) || 0,
+      leadTimeDays: 0, // repurposed: not applicable for legal
+      riskLevel: String(reflectionData.caseViability || caseData.caseStrength || strategyData.recommendedApproach || 'pending'),
+      complianceStatus: complianceData.courtRulesCompliant ? 'Court Ready' : (filingData.courtName ? 'Filing Ready' : 'Review Required'),
       confidence: Math.round(avgConfidence * 100) / 100,
     };
   } else if (domain === 'medical' || domain === 'medical_dispatch' || domain === 'healthcare' || domain === 'ems') {

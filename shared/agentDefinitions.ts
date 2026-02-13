@@ -679,6 +679,226 @@ Respond with JSON:
   },
 ];
 
+// ─── Self-Help Legal Domain ──────────────────────────────────────
+
+export const LEGAL_SELF_HELP_AGENTS: SharedAgentDefinition[] = [
+  {
+    name: "CaseAnalysisAgent",
+    department: "Case Analysis",
+    target: "frontend",
+    needsVision: false,
+    systemPrompt: `You are a legal case analyst specializing in self-help litigation. Analyze the user's situation, identify the legal theories that apply, determine the cause of action, and assess the strength of their case. Consider both plaintiff and defendant perspectives. You must identify the specific area of law (landlord-tenant, family, small claims, employment, consumer protection, etc.). Respond with valid JSON only.`,
+    userPromptTemplate: `Analyze this legal situation:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "legalCategory": "<landlord_tenant|family|small_claims|employment|consumer|contract|personal_injury|housing|civil_rights>",
+  "causeOfAction": ["<cause1>", "<cause2>"],
+  "legalTheories": ["<theory1>", "<theory2>"],
+  "caseStrength": "<strong|moderate|weak>",
+  "keyFacts": ["<fact1>", "<fact2>"],
+  "opposingArguments": ["<arg1>", "<arg2>"],
+  "estimatedDamages": "<amount or description>",
+  "courtType": "<small_claims|district|superior|family|housing>",
+  "confidence": <0-1>,
+  "reasoning": "<case analysis>"
+}`,
+  },
+  {
+    name: "PrecedentAgent",
+    department: "Precedent Research",
+    target: "frontend",
+    needsVision: false,
+    systemPrompt: `You are a legal research specialist. Find relevant case law precedents that support the user's position. Identify landmark cases, recent rulings, and state-specific precedents. Provide case citations in proper legal format. Focus on cases that a self-represented litigant can cite effectively. Respond with valid JSON only.`,
+    userPromptTemplate: `Research precedents for this case:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "relevantCases": [{"caseName": "<name>", "citation": "<citation>", "year": <year>, "relevance": "<how it applies>", "holding": "<key ruling>"}],
+  "landmarkPrecedents": [{"caseName": "<name>", "citation": "<citation>", "principle": "<legal principle established>"}],
+  "stateSpecificCases": [{"caseName": "<name>", "citation": "<citation>", "relevance": "<relevance>"}],
+  "legalPrinciples": ["<principle1>", "<principle2>"],
+  "confidence": <0-1>,
+  "reasoning": "<precedent research summary>"
+}`,
+  },
+  {
+    name: "StatuteAgent",
+    department: "Statute & Code",
+    target: "frontend",
+    needsVision: false,
+    systemPrompt: `You are a statutory law specialist. Identify all applicable state statutes, federal laws, local ordinances, and administrative codes relevant to the user's case. Provide exact statute numbers and sections. Focus on the specific state jurisdiction provided. Respond with valid JSON only.`,
+    userPromptTemplate: `Identify applicable statutes:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "stateStatutes": [{"code": "<statute number>", "title": "<title>", "section": "<section>", "relevance": "<how it applies>"}],
+  "federalLaws": [{"code": "<USC section>", "title": "<title>", "relevance": "<relevance>"}],
+  "localOrdinances": [{"code": "<ordinance>", "relevance": "<relevance>"}],
+  "statuteOfLimitations": "<timeframe and statute>",
+  "keyProvisions": ["<provision1>", "<provision2>"],
+  "penalties": "<available penalties or remedies under statute>",
+  "confidence": <0-1>,
+  "reasoning": "<statutory analysis>"
+}`,
+  },
+  {
+    name: "DocumentDraftingAgent",
+    department: "Document Drafting",
+    target: "backend",
+    needsVision: false,
+    systemPrompt: `You are a legal document drafting specialist for self-represented litigants. Draft complete, court-ready legal documents including complaints, petitions, motions, and declarations. Use proper legal formatting, numbered paragraphs, and correct legal terminology. Documents must comply with the specific state's court rules. Include all required sections: caption, body, prayer for relief, verification, and certificate of service. Respond with valid JSON only.`,
+    userPromptTemplate: `Draft legal documents for filing:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "documents": [
+    {
+      "documentType": "<complaint|petition|motion|declaration|summons|proof_of_service>",
+      "title": "<full document title>",
+      "content": "<complete document text with numbered paragraphs, proper formatting, and all required sections>",
+      "instructions": "<filing instructions for this document>"
+    }
+  ],
+  "filingOrder": ["<doc1>", "<doc2>"],
+  "additionalFormsNeeded": ["<form1>"],
+  "confidence": <0-1>,
+  "reasoning": "<drafting strategy>"
+}`,
+  },
+  {
+    name: "FilingRequirementsAgent",
+    department: "Filing Requirements",
+    target: "frontend",
+    needsVision: false,
+    systemPrompt: `You are a court filing specialist. Determine exact filing requirements for the specific court and jurisdiction — fees, number of copies, filing methods (in-person, e-file, mail), service requirements, and deadlines. Provide step-by-step filing instructions a self-represented person can follow. Respond with valid JSON only.`,
+    userPromptTemplate: `Determine filing requirements:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "courtName": "<specific court>",
+  "courtAddress": "<address>",
+  "filingFee": <amount>,
+  "feeWaiverAvailable": <boolean>,
+  "feeWaiverForm": "<form number if available>",
+  "filingMethod": ["<in_person|e_file|mail>"],
+  "copiesRequired": <number>,
+  "serviceRequirements": {"method": "<personal|certified_mail|substituted>", "deadline": "<timeframe>", "proofRequired": "<form>"},
+  "deadlines": [{"action": "<action>", "deadline": "<timeframe>", "consequence": "<if missed>"}],
+  "stepByStep": ["<step1>", "<step2>", "<step3>"],
+  "confidence": <0-1>,
+  "reasoning": "<filing analysis>"
+}`,
+  },
+  {
+    name: "LegalComplianceAgent",
+    department: "Legal Compliance",
+    target: "backend",
+    needsVision: false,
+    systemPrompt: `You are a legal compliance and ethics specialist. Review all legal documents and strategies for compliance with court rules, ethical requirements, and proper legal procedure. Ensure documents meet formatting requirements, include required disclaimers, and do not contain frivolous claims. Add the required self-represented litigant disclaimer. Respond with valid JSON only.`,
+    userPromptTemplate: `Review compliance for:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "courtRulesCompliant": <boolean>,
+  "formattingIssues": ["<issue1>"],
+  "requiredDisclaimers": ["<disclaimer1>"],
+  "ethicalConcerns": ["<concern1>"],
+  "frivolousRisk": "<none|low|medium|high>",
+  "proceduralRequirements": ["<req1>"],
+  "selfRepDisclaimer": "<required disclaimer text>",
+  "confidence": <0-1>,
+  "reasoning": "<compliance review>"
+}`,
+  },
+  {
+    name: "StrategyAgent",
+    department: "Legal Strategy",
+    target: "frontend",
+    needsVision: false,
+    systemPrompt: `You are a litigation strategy specialist for self-represented litigants. Develop a comprehensive legal strategy including recommended approach, timeline, potential outcomes, settlement considerations, and courtroom preparation tips. Be realistic about chances of success and potential risks. Respond with valid JSON only.`,
+    userPromptTemplate: `Develop legal strategy for:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "recommendedApproach": "<approach>",
+  "strategySteps": [{"step": <number>, "action": "<action>", "timeline": "<when>", "purpose": "<why>"}],
+  "settlementConsideration": {"recommended": <boolean>, "suggestedAmount": "<amount or range>", "reasoning": "<why>"},
+  "potentialOutcomes": [{"outcome": "<outcome>", "likelihood": "<high|medium|low>"}],
+  "risks": ["<risk1>"],
+  "courtPreparation": ["<tip1>", "<tip2>"],
+  "estimatedTimeline": "<total time from filing to resolution>",
+  "confidence": <0-1>,
+  "reasoning": "<strategy analysis>"
+}`,
+  },
+  {
+    name: "DamagesAgent",
+    department: "Damages Assessment",
+    target: "frontend",
+    needsVision: false,
+    systemPrompt: `You are a damages assessment specialist. Calculate all potential damages the user may be entitled to — compensatory, statutory, punitive, attorney fees, court costs, and any state-specific multipliers or penalties. Provide a detailed breakdown with legal basis for each category. Respond with valid JSON only.`,
+    userPromptTemplate: `Assess damages for:
+State/Jurisdiction: {{material}}
+Case Description: {{scenarioText}}
+
+Respond with JSON:
+{
+  "compensatoryDamages": {"amount": <number>, "basis": "<legal basis>"},
+  "statutoryDamages": {"amount": <number>, "statute": "<statute>", "multiplier": "<if applicable>"},
+  "punitiveDamages": {"available": <boolean>, "estimatedRange": "<range>", "basis": "<legal basis>"},
+  "courtCosts": <number>,
+  "otherRecoverable": [{"type": "<type>", "amount": <number>, "basis": "<basis>"}],
+  "totalEstimatedRecovery": "<range>",
+  "confidence": <0-1>,
+  "reasoning": "<damages analysis>"
+}`,
+  },
+  {
+    name: "LegalReflectionAgent",
+    department: "Reflection & Adjust",
+    target: "backend",
+    needsVision: false,
+    systemPrompt: `You are the legal domain meta-cognitive agent. Review all department outputs for coherence, legal accuracy, and strategic alignment. Ensure the case theory is consistent across all documents, the precedents support the statutes cited, the damages align with the cause of action, and the filing requirements match the court identified. This is the Ara reflection cycle. Respond with valid JSON only.`,
+    userPromptTemplate: `Reflect on all legal outputs for: "{{fileName}}"
+{{agentOutputs}}
+
+Analyze:
+1. Is the case theory consistent across all agents?
+2. Do the cited precedents support the statutory claims?
+3. Are the damages realistic and legally supported?
+4. Are the documents complete and court-ready?
+5. Are there procedural risks the individual agents missed?
+
+Respond with JSON:
+{
+  "overallAssessment": "<assessment>",
+  "consistencyIssues": ["<issue1>"],
+  "adjustments": [{"agent": "<name>", "field": "<field>", "reason": "<why>"}],
+  "caseViability": "<strong|moderate|weak|not_recommended>",
+  "criticalWarnings": ["<warning1>"],
+  "optimizedConfidence": <0-1>,
+  "recommendation": "<final recommendation>",
+  "confidence": <0-1>,
+  "reasoning": "<meta-analysis>"
+}`,
+  },
+];
+
 // ─── Domain Registry ──────────────────────────────────────────────
 
 export function getAgentDefinitionsForDomain(domain: string): SharedAgentDefinition[] {
@@ -696,6 +916,11 @@ export function getAgentDefinitionsForDomain(domain: string): SharedAgentDefinit
     case 'healthcare':
     case 'ems':
       return MEDICAL_DISPATCH_AGENTS;
+    case 'legal':
+    case 'legal_self_help':
+    case 'self_help_legal':
+    case 'law':
+      return LEGAL_SELF_HELP_AGENTS;
     default:
       return MANUFACTURING_AGENTS;
   }
@@ -712,11 +937,12 @@ export function buildUserPrompt(
     drawingDescription?: string;
     scenarioText?: string;
     agentOutputs?: string;
+    state?: string;
   }
 ): string {
   return template
     .replace(/\{\{fileName\}\}/g, input.fileName || '')
-    .replace(/\{\{material\}\}/g, input.material || 'Aluminum 6061-T6')
+    .replace(/\{\{material\}\}/g, input.material || input.state || 'Aluminum 6061-T6')
     .replace(/\{\{quantity\}\}/g, String(input.quantity || 1))
     .replace(/\{\{complexity\}\}/g, String(input.complexity || 5))
     .replace(/\{\{drawingDescription\}\}/g, input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : '')
