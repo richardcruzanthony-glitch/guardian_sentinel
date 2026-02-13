@@ -7,6 +7,7 @@ export interface AgentStatus {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   duration?: number;
   confidence?: number;
+  errorReason?: string;
 }
 
 interface AgentVisualizationProps {
@@ -152,6 +153,13 @@ export function AgentVisualization({
                   )}
                 </div>
 
+                {/* Error reason for failed agents */}
+                {isFailed && agent.errorReason && (
+                  <p className="text-[9px] text-destructive mt-1 truncate" title={agent.errorReason}>
+                    {agent.errorReason}
+                  </p>
+                )}
+
                 {/* Confidence bar */}
                 {agent.confidence !== undefined && agent.confidence > 0 && (
                   <div className="mt-2">
@@ -172,6 +180,17 @@ export function AgentVisualization({
           })}
         </div>
       </div>
+
+      {/* API Quota Warning */}
+      {failedCount > 0 && animatedAgents.some(a => a.errorReason?.includes('quota') || a.errorReason?.includes('exhausted')) && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+          <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0" />
+          <div>
+            <p className="text-sm text-yellow-400 font-medium">AI API Quota Temporarily Exhausted</p>
+            <p className="text-xs text-muted-foreground">The parallel architecture fired all {totalCount} agents correctly. {failedCount} agents could not complete because the AI service quota was reached. This is a resource limit, not a system failure. Results will be complete when quota refreshes.</p>
+          </div>
+        </div>
+      )}
 
       {/* Summary bar */}
       {completedCount > 0 && (

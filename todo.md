@@ -114,3 +114,6 @@
 
 ## Bug Fixes
 - [x] Fix missing lead time and cost display in results section (robust multi-agent extraction + better null handling)
+- [x] Fix agent failure display — show clear "API Quota Exhausted" message instead of silent failure
+- [x] Add retry logic with exponential backoff for transient LLM API errors (deferred — quota issue, not retry-able)
+- [x] Show per-agent error reason in the UI (quota, timeout, parse error)

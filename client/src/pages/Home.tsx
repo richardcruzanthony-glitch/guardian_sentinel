@@ -230,13 +230,27 @@ export default function Home() {
 
   const agentStatuses: AgentStatus[] = useMemo(() => {
     if (!processingResult) return [];
-    return processingResult.agents.map((a: any) => ({
-      name: a.agentName,
-      department: a.department,
-      status: a.status,
-      duration: a.duration,
-      confidence: a.confidence,
-    }));
+    return processingResult.agents.map((a: any) => {
+      let errorReason = '';
+      if (a.status === 'failed' && a.data?.error) {
+        const errStr = String(a.data.error);
+        if (errStr.includes('exhausted') || errStr.includes('quota')) {
+          errorReason = 'API quota exhausted';
+        } else if (errStr.includes('timeout') || errStr.includes('Timeout')) {
+          errorReason = 'Request timed out';
+        } else {
+          errorReason = 'Processing error';
+        }
+      }
+      return {
+        name: a.agentName,
+        department: a.department,
+        status: a.status,
+        duration: a.duration,
+        confidence: a.confidence,
+        errorReason,
+      };
+    });
   }, [processingResult]);
 
   if (loading) {
