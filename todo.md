@@ -163,3 +163,9 @@
 - [x] Add guidance text that combining description + documents gives best results
 - [x] Add proceed options after intake (Analyze Case, Upload More Documents, etc.)
 - [x] Domain-specific background color/gradient when tabs are selected (mfg=cyan, defense=red, medical=blue, legal=purple)
+- [x] Add Gemini API key as secret
+- [x] Wire Gemini as fallback LLM provider when Manus API quota exhausted
+- [x] Test live demo with Gemini (key valid but free tier quota exhausted)
+- [x] Add Puter.js CDN to index.html for free unlimited AI
+- [x] Create Puter AI adapter for hybrid orchestrator
+- [x] Wire Puter as fallback in hybrid orchestrator when server is exhausted

@@ -13,6 +13,7 @@
  *   - Manus (built-in): Vision-capable, premium reasoning
  *   - Groq: Blazing fast inference, free tier, no vision
  *   - Gemini: Good general purpose, free tier, vision-capable
+ *   - Puter: Free unlimited AI API, 500+ models, no API key needed
  * 
  * The frontend never sees which provider is used. It's one brain.
  */
@@ -38,6 +39,8 @@ export interface LLMProvider {
   circuitBrokenAt: number;
   /** How long to wait before trying a circuit-broken provider again (ms) */
   recoveryWindow: number;
+  /** Whether this provider uses a custom SDK instead of OpenAI-compatible REST */
+  useCustomSdk?: boolean;
 }
 
 export interface RouteDecision {
@@ -105,6 +108,27 @@ function getProviders(): LLMProvider[] {
       maxFailures: 3,
       circuitBrokenAt: 0,
       recoveryWindow: 20000,
+    });
+  }
+
+  // Puter.js — free unlimited AI API, 500+ models, no API key needed
+  // Always available as the ultimate fallback
+  const puterToken = process.env.PUTER_AUTH_TOKEN;
+  if (puterToken) {
+    providers.push({
+      name: 'puter',
+      endpoint: '', // Uses Puter SDK, not REST
+      apiKey: puterToken,
+      model: 'gpt-4o',
+      supportsVision: true,
+      supportsJsonMode: true,
+      maxTokens: 8192,
+      healthy: true,
+      consecutiveFailures: 0,
+      maxFailures: 5, // Higher tolerance — free unlimited
+      circuitBrokenAt: 0,
+      recoveryWindow: 10000,
+      useCustomSdk: true,
     });
   }
 
@@ -321,6 +345,11 @@ async function callProvider(
   messages: any[],
   response_format?: any,
 ): Promise<RoutedLLMResult> {
+  // Puter.js uses its own SDK instead of OpenAI-compatible REST
+  if (provider.useCustomSdk && provider.name === 'puter') {
+    return callPuterProvider(provider, messages, response_format);
+  }
+
   const payload: Record<string, unknown> = {
     model: provider.model,
     messages,
@@ -393,4 +422,83 @@ export function getActiveProviderCount(): number {
 
 export function getTotalProviderCount(): number {
   return providerPool.length;
+}
+
+// ─── Puter.js Provider (SDK-based) ─────────────────────────────────
+
+let puterInstance: any = null;
+
+function getPuterInstance(): any {
+  if (puterInstance) return puterInstance;
+  try {
+    // Dynamic import for Puter.js Node.js SDK
+    const { init } = require('@heyputer/puter.js/src/init.cjs');
+    const token = process.env.PUTER_AUTH_TOKEN;
+    if (!token) throw new Error('PUTER_AUTH_TOKEN not set');
+    puterInstance = init(token);
+    console.log('[Ara Router] Puter.js initialized successfully');
+    return puterInstance;
+  } catch (err) {
+    console.error('[Ara Router] Failed to initialize Puter.js:', err);
+    throw err;
+  }
+}
+
+async function callPuterProvider(
+  provider: LLMProvider,
+  messages: any[],
+  response_format?: any,
+): Promise<RoutedLLMResult> {
+  const puter = getPuterInstance();
+
+  const options: any = {
+    model: provider.model,
+    max_tokens: provider.maxTokens,
+  };
+
+  // Puter supports response_format for JSON mode
+  if (response_format) {
+    // For JSON mode, instruct the model via system message instead
+    // since Puter SDK may not support response_format directly
+    const hasJsonInstruction = messages.some((m: any) => 
+      typeof m.content === 'string' && m.content.includes('JSON')
+    );
+    if (!hasJsonInstruction && messages.length > 0) {
+      // Add JSON instruction to system message
+      const systemIdx = messages.findIndex((m: any) => m.role === 'system');
+      if (systemIdx >= 0) {
+        messages[systemIdx] = {
+          ...messages[systemIdx],
+          content: messages[systemIdx].content + '\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown, no code blocks, just raw JSON.',
+        };
+      }
+    }
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+
+  try {
+    const response = await puter.ai.chat(messages, false, options);
+
+    // Normalize Puter response to match RoutedLLMResult format
+    const content = typeof response === 'string' 
+      ? response 
+      : response?.message?.content ?? response?.toString() ?? '';
+
+    return {
+      choices: [{
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: content,
+        },
+        finish_reason: 'stop',
+      }],
+      _provider: 'puter',
+      _model: provider.model,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
