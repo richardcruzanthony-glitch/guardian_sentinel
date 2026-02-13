@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight, Crosshair, Factory, Ambulance, Brain, Layers, RefreshCw } from "lucide-react";
 import { getLoginUrl } from "@/const";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualization";
 import { CompliancePackage } from "@/components/CompliancePackage";
+import { runHybridProcessing, type AgentResult, type HybridProcessingResult } from "@/lib/hybridOrchestrator";
 
 type Domain = 'manufacturing' | 'defense' | 'medical';
 
@@ -16,11 +17,11 @@ const DOMAIN_CONFIG = {
     icon: Factory,
     color: 'text-accent',
     bgColor: 'bg-accent',
-    description: 'Upload an engineering drawing. Guardian fires Sales, Engineering, Quality, Planning, Procurement, Manufacturing, Shipping, Compliance, Audit, and Reflection agents',
+    description: 'Upload an engineering drawing. Ara coordinates Sales, Engineering, Quality, Planning, Procurement, Manufacturing, Shipping, Compliance, and Reflection departments',
     uploadLabel: 'Upload Engineering Drawing',
     uploadHint: 'Images (JPG, PNG), STEP, IGES, DWG, PDF',
     acceptTypes: 'image/*,.stp,.step,.iges,.igs,.dwg,.pdf',
-    processLabel: 'Fire All Agents — Analyze Drawing',
+    processLabel: 'Ara — Coordinate All Departments',
     traditionalSteps: [
       { dept: 'RFQ Received', time: '1-2 days' },
       { dept: 'Engineering Review', time: '2-3 days' },
@@ -44,11 +45,11 @@ const DOMAIN_CONFIG = {
     icon: Crosshair,
     color: 'text-red-400',
     bgColor: 'bg-red-500',
-    description: 'Input a threat scenario. Guardian fires ISR, Targeting, Weapons, EW, Cyber, C2, Legal/JAG, BDA, Logistics, and Reflection agents',
+    description: 'Input a threat scenario. Ara coordinates ISR, Targeting, Weapons, EW, Cyber, C2, Legal/JAG, BDA, Logistics, and Reflection nodes',
     uploadLabel: 'Input Threat Scenario',
     uploadHint: 'Text-based scenario briefing',
     acceptTypes: '',
-    processLabel: 'Fire Kill Chain — All Domains Simultaneously',
+    processLabel: 'Ara — Execute Kill Chain',
     traditionalSteps: [
       { dept: 'Intelligence Gathering', time: '2-6 hours' },
       { dept: 'Target Development', time: '1-4 hours' },
@@ -71,11 +72,11 @@ const DOMAIN_CONFIG = {
     icon: Ambulance,
     color: 'text-blue-400',
     bgColor: 'bg-blue-500',
-    description: 'Input a medical emergency. Guardian fires Triage, Dispatch, EMT/Paramedic, ER Prep, Pharmacy, Lab, Imaging, Billing, Compliance, and QI agents',
+    description: 'Input a medical emergency. Ara coordinates Triage, Dispatch, Medical Direction, ER Prep, Pharmacy, Trauma, Billing, Compliance, and Notification departments',
     uploadLabel: 'Input Medical Emergency',
     uploadHint: 'Text-based dispatch report',
     acceptTypes: '',
-    processLabel: 'Fire All Departments — Full Emergency Response',
+    processLabel: 'Ara — Full Emergency Response',
     traditionalSteps: [
       { dept: '911 Call Processing', time: '2-4 min' },
       { dept: 'Dispatch Decision', time: '1-3 min' },
@@ -110,6 +111,7 @@ export default function Home() {
   const [processingResult, setProcessingResult] = useState<any>(null);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [processingStage, setProcessingStage] = useState<string>('');
+  const [liveAgentStatuses, setLiveAgentStatuses] = useState<Map<string, AgentStatus>>(new Map());
 
   const config = DOMAIN_CONFIG[domain];
   const DomainIcon = config.icon;
@@ -170,7 +172,8 @@ export default function Home() {
 
     setIsProcessing(true);
     setProcessingResult(null);
-    setProcessingStage(domain === 'manufacturing' ? 'Uploading drawing...' : 'Processing scenario...');
+    setLiveAgentStatuses(new Map());
+    setProcessingStage(domain === 'manufacturing' ? 'Uploading drawing...' : 'Ara is coordinating all departments...');
 
     try {
       let imageUrl: string | undefined;
@@ -201,57 +204,72 @@ export default function Home() {
         fileName = scenarioText.substring(0, 200);
       }
 
-      setProcessingStage(
-        domain === 'defense' 
-          ? 'Firing kill chain — all domains simultaneously...' 
-          : domain === 'medical'
-            ? 'Dispatching all departments simultaneously...'
-            : 'Firing all domain agents in parallel...');
+      setProcessingStage('Ara is coordinating all departments simultaneously...');
 
-      const result = await processMutation.mutateAsync({
-        fileName,
-        fileSize: selectedFile?.size || scenarioText.length,
-        complexity,
-        quantity,
-        material: domain === 'defense' ? threatEnv : domain === 'medical' ? sceneType : material,
-        imageUrl,
-        domain,
-      });
+      // Real-time agent status callback
+      const onAgentStatus = (agentName: string, status: string, result?: AgentResult) => {
+        setLiveAgentStatuses(prev => {
+          const next = new Map(prev);
+          next.set(agentName, {
+            name: agentName,
+            department: result?.department || agentName.replace('Agent', ''),
+            status: status as any,
+            duration: result?.duration,
+            confidence: result?.confidence,
+            errorReason: '',
+          });
+          return next;
+        });
+      };
 
-      setProcessingResult(result.result);
+      // Backend function for heavy/vision agents
+      const backendProcessFn = async (input: any) => {
+        const res = await processMutation.mutateAsync(input);
+        return res;
+      };
+
+      // Run hybrid processing — frontend (Puter.js) + backend (Manus) in true parallel
+      const result = await runHybridProcessing(
+        {
+          fileName,
+          fileSize: selectedFile?.size || scenarioText.length,
+          complexity,
+          material: domain === 'defense' ? threatEnv : domain === 'medical' ? sceneType : material,
+          quantity,
+          imageUrl,
+          domain,
+          scenarioText: domain !== 'manufacturing' ? scenarioText : undefined,
+        },
+        backendProcessFn,
+        onAgentStatus,
+      );
+
+      setProcessingResult(result);
       setProcessingStage('');
     } catch (error) {
       console.error('Processing error:', error);
-      setProcessingStage('Error occurred during processing');
+      setProcessingStage('Recalibrating neural pathways...');
     } finally {
       setIsProcessing(false);
     }
   };
 
   const agentStatuses: AgentStatus[] = useMemo(() => {
+    // During processing, show live real-time statuses
+    if (isProcessing && liveAgentStatuses.size > 0) {
+      return Array.from(liveAgentStatuses.values());
+    }
+    // After completion, show final results
     if (!processingResult) return [];
-    return processingResult.agents.map((a: any) => {
-      let errorReason = '';
-      if (a.status === 'failed' && a.data?.error) {
-        const errStr = String(a.data.error);
-        if (errStr.includes('exhausted') || errStr.includes('quota')) {
-          errorReason = 'API quota exhausted';
-        } else if (errStr.includes('timeout') || errStr.includes('Timeout')) {
-          errorReason = 'Request timed out';
-        } else {
-          errorReason = 'Processing error';
-        }
-      }
-      return {
-        name: a.agentName,
-        department: a.department,
-        status: a.status,
-        duration: a.duration,
-        confidence: a.confidence,
-        errorReason,
-      };
-    });
-  }, [processingResult]);
+    return processingResult.agents.map((a: any) => ({
+      name: a.agentName,
+      department: a.department,
+      status: a.status,
+      duration: a.duration,
+      confidence: a.confidence,
+      errorReason: '', // No technical errors exposed
+    }));
+  }, [processingResult, isProcessing, liveAgentStatuses]);
 
   if (loading) {
     return (
@@ -272,7 +290,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground">Guardian OS</h1>
-              <p className="text-xs text-muted-foreground">Learning &middot; Self-Reflecting &middot; Adjusting</p>
+              <p className="text-xs text-muted-foreground">Learns &middot; Recommends &middot; Alerts &middot; Executes</p>
             </div>
           </div>
 
@@ -338,7 +356,7 @@ export default function Home() {
               : 'border-accent/30 bg-accent/5 text-accent'
             } text-xs font-medium`}>
               <Brain className="w-3 h-3" />
-              A Digital Brain — Not a Replacement
+              Your Operations Manager — Learns Your Business
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
               {domain === 'defense' ? (
@@ -350,10 +368,10 @@ export default function Home() {
               )}
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl">
-              Guardian OS is a <strong className="text-foreground">learning, self-reflecting, and adjusting digital brain</strong> that sits atop your current systems. 
-              It is <strong className="text-foreground">non-intrusive</strong> — it doesn't replace your tools, your people, or your processes. 
-              It <strong className="text-foreground">links your entire system into a single unit</strong>, firing every department that touches a decision at the same moment, 
-              instead of passing work from desk to desk.
+              Guardian OS is your <strong className="text-foreground">operations manager</strong> — it learns and adjusts to your business model, 
+              provides <strong className="text-foreground">recommendations, alerts concerns, and can execute when necessary</strong>. 
+              Guardian learns your business and <strong className="text-foreground">perfects the execution</strong>. 
+              Non-intrusive. It sits on top of your current systems — no replacements, no disruption.
             </p>
           </div>
 
@@ -387,7 +405,7 @@ export default function Home() {
             {/* Guardian: Parallel Architecture */}
             <div className={`p-5 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : 'border-accent/30 bg-accent/5'}`}>
               <p className={`text-xs ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'} uppercase tracking-wider mb-3 font-semibold`}>
-                Guardian OS — Parallel Architecture
+                Guardian OS — Neural Architecture
               </p>
               <div className="flex items-center gap-1 text-xs flex-wrap mb-3">
                 {config.guardianDepts.map((dept) => (
@@ -409,15 +427,15 @@ export default function Home() {
               <div className="mt-3 pt-3 border-t border-border/50">
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                   <Brain className="w-3 h-3" />
-                  <span>Learns from every decision. Self-reflects. Adjusts. Gets better.</span>
+                  <span>Learns your business. Recommends. Alerts. Executes.</span>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
                   <Layers className="w-3 h-3" />
-                  <span>Sits on top of your existing systems. Non-intrusive. No replacement.</span>
+                  <span>Non-intrusive. Sits on top of your existing systems.</span>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
                   <RefreshCw className="w-3 h-3" />
-                  <span>Links your entire operation into a single coordinated unit.</span>
+                  <span>Perfects execution over time. Gets smarter every day.</span>
                 </div>
               </div>
             </div>
@@ -616,13 +634,13 @@ export default function Home() {
             {/* Speed Comparison: Guardian vs Manual Process */}
             <div className={`p-6 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : 'border-accent/30 bg-accent/5'}`}>
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-4 text-center">
-                Guardian Parallel Architecture vs. Current Standard (Manual Research & Handoff)
+                Ara Neural Architecture vs. Current Standard (Manual Research & Handoff)
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Agents Fired</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Departments Coordinated</p>
                   <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`}>{processingResult.agentCount}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">departments simultaneously</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">coordinated simultaneously</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Guardian Time</p>
@@ -649,7 +667,7 @@ export default function Home() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className={`w-5 h-5 ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`} />
-                  {domain === 'defense' ? 'Kill Chain Parallel Execution' : domain === 'medical' ? 'Emergency Response Parallel Execution' : 'Parallel Agent Execution'}
+                  {domain === 'defense' ? 'Ara — Kill Chain Coordination' : domain === 'medical' ? 'Ara — Emergency Response Coordination' : 'Ara — Department Coordination'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -811,7 +829,7 @@ export default function Home() {
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full ${agent.status === 'completed' ? 'bg-green-400' : 'bg-red-400'}`} />
                         <span className="text-sm font-medium text-foreground">{agent.department}</span>
-                        <span className="text-xs text-muted-foreground">({agent.agentName})</span>
+                        <span className="text-xs text-muted-foreground">({agent.agentName.replace('Agent', '')})</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">{(agent.duration / 1000).toFixed(1)}s</span>
@@ -843,12 +861,12 @@ export default function Home() {
             <div className="flex items-center justify-center gap-2">
               <Brain className="w-4 h-4 text-accent" />
               <p className="text-xs text-foreground font-semibold">
-                Guardian OS — A Learning, Self-Reflecting, Adjusting Digital Brain
+                Guardian OS — Learns Your Business. Perfects the Execution.
               </p>
             </div>
             <p className="text-xs text-muted-foreground max-w-xl mx-auto">
-              Sits atop your current systems. Non-intrusive. Links your entire operation into a single coordinated unit. 
-              Every department that touches a decision fires simultaneously.
+              Your operations manager. Learns and adjusts to your business model. Provides recommendations, alerts concerns, 
+              and executes when necessary. Non-intrusive. Sits on top of your current systems.
             </p>
           </div>
         </footer>

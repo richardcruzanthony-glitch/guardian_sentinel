@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getAgentsForDomain } from './agents';
 
-// Mock the LLM module
+// Mock the LLM module — vi.mock is hoisted so all data must be inline
 vi.mock('./_core/llm', () => ({
   invokeLLM: vi.fn().mockResolvedValue({
     choices: [{
@@ -18,6 +18,33 @@ vi.mock('./_core/llm', () => ({
       },
     }],
   }),
+}));
+
+// Mock the LLM router to prevent retry loops in tests
+vi.mock('./llmRouter', () => ({
+  invokeRoutedLLM: vi.fn().mockResolvedValue({
+    choices: [{
+      message: {
+        content: JSON.stringify({
+          quotedPrice: 450,
+          marginPercent: 25,
+          confidence: 0.85,
+          reasoning: 'Test analysis',
+          totalLeadTimeDays: 12,
+          riskLevel: 'medium',
+          as9100Compliant: true,
+        }),
+      },
+    }],
+    provider: 'manus',
+    attempts: 1,
+  }),
+  routeTask: vi.fn().mockReturnValue({
+    provider: { name: 'manus', model: 'test', healthy: true, consecutiveFailures: 0, circuitBrokenAt: 0, recoveryWindow: 30000, supportsJsonMode: true, supportsVision: true },
+    fallbacks: [],
+  }),
+  getActiveProviderCount: vi.fn().mockReturnValue(1),
+  refreshProviders: vi.fn(),
 }));
 
 describe('Guardian OS Agent Framework', () => {

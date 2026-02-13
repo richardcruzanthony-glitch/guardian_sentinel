@@ -66,6 +66,7 @@ export const appRouter = router({
         quantity: z.number().optional(),
         imageUrl: z.string().optional(),
         domain: z.string().default('manufacturing'),
+        agentNames: z.array(z.string()).optional(), // Hybrid routing: only run these agents on backend
       }))
       .mutation(async ({ input }) => {
         try {
@@ -76,7 +77,7 @@ export const appRouter = router({
             material: input.material,
             quantity: input.quantity,
             imageUrl: input.imageUrl,
-          }, input.domain);
+          }, input.domain, input.agentNames);
 
           // Send notification to owner
           try {

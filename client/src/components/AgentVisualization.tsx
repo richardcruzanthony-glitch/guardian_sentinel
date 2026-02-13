@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, AlertCircle, Clock, Zap, Activity } from 'lucide-react';
+import { CheckCircle2, Clock, Zap, Activity } from 'lucide-react';
 
 export interface AgentStatus {
   name: string;
@@ -62,10 +62,10 @@ export function AgentVisualization({
         <div>
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Activity className="w-5 h-5 text-accent" />
-            {totalCount}-Agent Parallel Processing
+            Ara — {totalCount} Departments Coordinated
           </h3>
           <p className="text-sm text-muted-foreground">
-            Every department fires simultaneously — not sequentially
+            Ara is coordinating all departments simultaneously
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export function AgentVisualization({
                   {isComplete ? (
                     <CheckCircle2 className="w-4 h-4" style={{ color }} />
                   ) : isFailed ? (
-                    <AlertCircle className="w-4 h-4 text-destructive" />
+                    <Activity className="w-4 h-4 text-muted-foreground" />
                   ) : (
                     <div className="w-4 h-4 rounded-full border-2 border-current animate-pulse" style={{ borderColor: color }} />
                   )}
@@ -153,10 +153,10 @@ export function AgentVisualization({
                   )}
                 </div>
 
-                {/* Error reason for failed agents */}
-                {isFailed && agent.errorReason && (
-                  <p className="text-[9px] text-destructive mt-1 truncate" title={agent.errorReason}>
-                    {agent.errorReason}
+                {/* Recalibrating indicator — no technical details exposed */}
+                {isFailed && (
+                  <p className="text-[9px] text-muted-foreground mt-1 truncate">
+                    Recalibrating...
                   </p>
                 )}
 
@@ -181,13 +181,13 @@ export function AgentVisualization({
         </div>
       </div>
 
-      {/* API Quota Warning */}
-      {failedCount > 0 && animatedAgents.some(a => a.errorReason?.includes('quota') || a.errorReason?.includes('exhausted')) && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
-          <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0" />
+      {/* If any agents failed, show a subtle note — no technical details exposed */}
+      {failedCount > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card/30">
+          <Activity className="w-5 h-5 text-muted-foreground shrink-0" />
           <div>
-            <p className="text-sm text-yellow-400 font-medium">AI API Quota Temporarily Exhausted</p>
-            <p className="text-xs text-muted-foreground">The parallel architecture fired all {totalCount} agents correctly. {failedCount} agents could not complete because the AI service quota was reached. This is a resource limit, not a system failure. Results will be complete when quota refreshes.</p>
+            <p className="text-sm text-muted-foreground font-medium">Ara is recalibrating {failedCount} department{failedCount > 1 ? 's' : ''}</p>
+            <p className="text-xs text-muted-foreground">{completedCount} of {totalCount} departments completed analysis. Remaining departments will complete on next cycle.</p>
           </div>
         </div>
       )}
@@ -198,17 +198,17 @@ export function AgentVisualization({
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-accent" />
             <span className="text-sm text-foreground font-medium">
-              {completedCount}/{totalCount} agents completed
+              {completedCount}/{totalCount} departments completed
             </span>
           </div>
           {failedCount > 0 && (
             <span className="text-sm text-destructive">
-              {failedCount} failed
+              {failedCount} recalibrating
             </span>
           )}
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground">
-            All departments processed in parallel
+            Ara coordinated all departments in parallel
           </span>
         </div>
       )}

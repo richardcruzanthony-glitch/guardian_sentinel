@@ -9,6 +9,7 @@
  */
 
 import { invokeLLM } from "./_core/llm";
+import { invokeRoutedLLM, type TaskWeight } from "./llmRouter";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -58,6 +59,10 @@ interface AgentDefinition {
   department: string;
   systemPrompt: string;
   userPromptBuilder: (input: AgentInput) => string;
+  /** Task weight determines routing — NOT hardcoded to a provider */
+  taskWeight?: TaskWeight;
+  /** Whether this agent needs vision (image analysis) capability */
+  needsVision?: boolean;
 }
 
 // ─── Manufacturing Domain Agents ─────────────────────────────────────
@@ -66,6 +71,7 @@ const MANUFACTURING_AGENTS: AgentDefinition[] = [
   {
     name: "SalesAgent",
     department: "Sales",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a senior aerospace sales engineer. Analyze the engineering drawing and determine pricing strategy, customer requirements interpretation, margin targets, and competitive positioning. You understand AS9100 customer expectations. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Analyze this part for sales quoting: "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -86,6 +92,7 @@ Respond with JSON:
   {
     name: "EngineeringAgent",
     department: "Engineering",
+    taskWeight: 'heavy' as TaskWeight,
     systemPrompt: `You are a senior manufacturing engineer specializing in aerospace CNC machining. Analyze the engineering drawing in detail — identify all features, dimensions, tolerances, surface finishes, and design-for-manufacturability concerns. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Perform engineering analysis of "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -107,6 +114,7 @@ Respond with JSON:
   {
     name: "QualityAgent",
     department: "Quality",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are an AS9100 quality engineer. Analyze the engineering drawing and create an inspection plan, identify critical-to-quality characteristics, and define acceptance criteria. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Create quality plan for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -127,6 +135,7 @@ Respond with JSON:
   {
     name: "PlanningAgent",
     department: "Planning",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a production planning specialist for aerospace manufacturing. Analyze the part and create a production schedule with capacity planning, lead times, and milestone tracking. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Create production plan for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -150,6 +159,7 @@ Respond with JSON:
   {
     name: "ProcurementAgent",
     department: "Procurement",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a procurement specialist for aerospace manufacturing. Analyze the part requirements and identify material sourcing, vendor selection, raw stock specifications, and supply chain considerations. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Procurement analysis for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -171,6 +181,7 @@ Respond with JSON:
   {
     name: "ManufacturingAgent",
     department: "Manufacturing",
+    taskWeight: 'heavy' as TaskWeight,
     systemPrompt: `You are a CNC machining specialist with 20+ years in aerospace manufacturing. Analyze the engineering drawing and create a detailed manufacturing routing with operations, tooling, fixtures, cycle times, and setup requirements. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Create manufacturing routing for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -192,6 +203,7 @@ Respond with JSON:
   {
     name: "ShippingAgent",
     department: "Shipping",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a logistics and shipping specialist for aerospace parts. Analyze the part and determine packaging requirements, shipping method, handling precautions, and delivery logistics. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Shipping analysis for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -214,6 +226,7 @@ Respond with JSON:
   {
     name: "ComplianceAgent",
     department: "Compliance",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are an AS9100 Rev D compliance auditor and regulatory specialist. Analyze the part for all applicable compliance requirements including AS9100, ITAR, EAR, DFARS, and industry-specific regulations. Generate the required documentation package. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Compliance assessment for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -236,6 +249,7 @@ Respond with JSON:
   {
     name: "AuditAgent",
     department: "Audit",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are an internal audit specialist for aerospace manufacturing. Create an audit trail framework, traceability requirements, and record-keeping plan for this part. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Audit trail planning for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -256,6 +270,7 @@ Respond with JSON:
   {
     name: "ReflectionAgent",
     department: "Reflection & Adjust",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a continuous improvement specialist. Analyze the overall manufacturing decision and identify patterns, lessons learned, accuracy improvements, and adjustments for future similar parts. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Reflection and adjustment analysis for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
@@ -281,6 +296,7 @@ const DEFENSE_KILL_CHAIN_AGENTS: AgentDefinition[] = [
   {
     name: "ISRAgent",
     department: "Intelligence, Surveillance & Reconnaissance",
+    taskWeight: 'heavy' as TaskWeight,
     systemPrompt: `You are a senior ISR analyst with 20 years of military intelligence experience. You process raw intelligence data — SIGINT, IMINT, HUMINT, OSINT — and produce actionable threat assessments. You identify targets, classify threats, assess intent, and determine patterns of life. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `SCENARIO BRIEFING: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -306,6 +322,7 @@ Respond with JSON:
   {
     name: "TargetingAgent",
     department: "Targeting",
+    taskWeight: 'heavy' as TaskWeight,
     systemPrompt: `You are a Joint Targeting specialist. You develop target packages, perform collateral damage estimation (CDE), determine weaponeering solutions, and assess proportionality under Law of Armed Conflict (LOAC). You work within the Joint Targeting Cycle (JTC). Respond with valid JSON only.`,
     userPromptBuilder: (input) => `TARGETING REQUEST: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -332,6 +349,7 @@ Respond with JSON:
   {
     name: "WeaponsAgent",
     department: "Weapons & Munitions",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a weapons systems officer and munitions specialist. You assess weapons availability, platform readiness, munition selection, delivery parameters, and weapons effects. You understand PGMs, area weapons, and effects-based operations. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `WEAPONS ASSESSMENT: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -358,6 +376,7 @@ Respond with JSON:
   {
     name: "EWAgent",
     department: "Electronic Warfare",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are an Electronic Warfare officer. You assess the electromagnetic spectrum, identify enemy emitters, recommend jamming/deception operations, and evaluate friendly force electronic protection. You understand EA, EP, and ES operations. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `EW ASSESSMENT: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -382,6 +401,7 @@ Respond with JSON:
   {
     name: "CyberAgent",
     department: "Cyber Operations",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a military cyber operations specialist. You assess cyber threats, network vulnerabilities, offensive cyber options, and defensive cyber posture. You understand OCO, DCO, and DODIN operations. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `CYBER ASSESSMENT: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -405,6 +425,7 @@ Respond with JSON:
   {
     name: "C2Agent",
     department: "Command & Control",
+    taskWeight: 'heavy' as TaskWeight,
     systemPrompt: `You are a Command & Control officer responsible for mission coordination, force synchronization, rules of engagement (ROE) verification, and commander's decision support. You ensure all actions align with commander's intent and operational authorities. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `C2 DECISION SUPPORT: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -432,6 +453,7 @@ Respond with JSON:
   {
     name: "LegalAgent",
     department: "Legal / JAG",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a military Judge Advocate General (JAG) officer. You assess legality of military operations under Law of Armed Conflict (LOAC), International Humanitarian Law (IHL), Rules of Engagement (ROE), and domestic law. You provide legal review for targeting decisions. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `LEGAL REVIEW: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -459,6 +481,7 @@ Respond with JSON:
   {
     name: "BDAAgent",
     department: "Battle Damage Assessment",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a Battle Damage Assessment specialist. You plan BDA collection, define success criteria, establish re-attack recommendations, and assess mission effectiveness. You understand physical damage assessment (PDA), functional damage assessment (FDA), and target system assessment (TSA). Respond with valid JSON only.`,
     userPromptBuilder: (input) => `BDA PLANNING: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -483,6 +506,7 @@ Respond with JSON:
   {
     name: "LogisticsAgent",
     department: "Logistics & Sustainment",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a military logistics officer. You assess ammunition supply, fuel requirements, platform maintenance status, medical support, and sustainment capacity for operations. You ensure the force can execute and sustain the mission. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `LOGISTICS ASSESSMENT: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -508,6 +532,7 @@ Respond with JSON:
   {
     name: "DefenseReflectionAgent",
     department: "Reflection & Lessons Learned",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a military after-action review specialist and doctrine analyst. You assess the overall kill chain decision, identify gaps, recommend improvements, capture lessons learned, and evaluate decision speed vs. accuracy tradeoffs. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `AFTER-ACTION REFLECTION: ${input.fileName}
 Threat environment: ${input.material || 'Contested multi-domain'}
@@ -538,6 +563,7 @@ const MEDICAL_DISPATCH_AGENTS: AgentDefinition[] = [
   {
     name: "TriageAgent",
     department: "Triage",
+    taskWeight: 'heavy' as TaskWeight,
     systemPrompt: `You are an emergency triage nurse with 20 years of experience using the Emergency Severity Index (ESI). You rapidly assess patient acuity, assign triage levels, identify life threats, and prioritize care. You follow START triage for mass casualty and ESI for individual patients. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `INCOMING PATIENT: ${input.fileName}
 Severity estimate: ${input.complexity || 5}/10
@@ -565,6 +591,7 @@ Respond with JSON:
   {
     name: "DispatchAgent",
     department: "Dispatch & Routing",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are an emergency medical dispatch coordinator. You determine the appropriate response level (BLS/ALS/Critical Care), select the nearest available unit, calculate response times, and coordinate with receiving facilities. You follow Emergency Medical Dispatch (EMD) protocols. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `DISPATCH REQUEST: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -591,6 +618,7 @@ Respond with JSON:
   {
     name: "ParamedicAgent",
     department: "EMT / Paramedic",
+    taskWeight: 'heavy' as TaskWeight,
     systemPrompt: `You are a senior paramedic and field medicine specialist. You develop prehospital treatment plans, determine interventions, medication administration, and patient stabilization protocols. You follow NREMT and local medical direction protocols. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `FIELD TREATMENT PLAN: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -616,6 +644,7 @@ Respond with JSON:
   {
     name: "ERPrepAgent",
     department: "ER Preparation",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are an Emergency Department charge nurse and trauma team coordinator. You prepare the receiving facility — activate trauma teams, prepare resuscitation bays, stage equipment, and coordinate specialty consults. You follow ATLS and institutional trauma activation criteria. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `ER PREPARATION: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -643,6 +672,7 @@ Respond with JSON:
   {
     name: "PharmacyAgent",
     department: "Pharmacy",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a clinical pharmacist specializing in emergency medicine. You prepare medication orders, check for drug interactions, calculate weight-based dosing, and ensure formulary compliance. You follow evidence-based emergency pharmacotherapy guidelines. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `PHARMACY PREPARATION: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -668,6 +698,7 @@ Respond with JSON:
   {
     name: "LabAgent",
     department: "Laboratory",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a clinical laboratory director. You anticipate lab orders, prepare stat panels, coordinate blood bank, and ensure rapid turnaround for critical results. You follow CLIA and CAP guidelines. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `LAB PREPARATION: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -692,6 +723,7 @@ Respond with JSON:
   {
     name: "ImagingAgent",
     department: "Imaging / Radiology",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a radiology department coordinator and emergency radiologist. You anticipate imaging needs, prepare modalities (X-ray, CT, ultrasound, MRI), coordinate portable studies, and prioritize reads. You follow ACR Appropriateness Criteria. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `IMAGING PREPARATION: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -716,6 +748,7 @@ Respond with JSON:
   {
     name: "BillingAgent",
     department: "Billing & Insurance",
+    taskWeight: 'lightweight' as TaskWeight,
     systemPrompt: `You are a healthcare revenue cycle specialist and emergency department billing coordinator. You assess insurance coverage, estimate costs, identify authorization requirements, and ensure EMTALA compliance regardless of ability to pay. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `BILLING ASSESSMENT: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -741,6 +774,7 @@ Respond with JSON:
   {
     name: "MedComplianceAgent",
     department: "Medical Compliance",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a healthcare compliance officer specializing in emergency medicine. You ensure EMTALA compliance, HIPAA adherence, mandatory reporting requirements, consent documentation, and regulatory compliance. You understand CMS Conditions of Participation. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `COMPLIANCE REVIEW: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -766,6 +800,7 @@ Respond with JSON:
   {
     name: "MedReflectionAgent",
     department: "QI & Reflection",
+    taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a quality improvement specialist and emergency medicine physician focused on continuous improvement. You assess the overall emergency response decision, identify system gaps, recommend process improvements, and evaluate response time optimization. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `QI REFLECTION: ${input.fileName}
 Severity: ${input.complexity || 5}/10
@@ -826,16 +861,30 @@ function parseLLMResponse(content: string): Record<string, unknown> {
 }
 
 /**
- * Run a single agent — generic executor for any domain agent
+ * Run a single agent — generic executor for any domain agent.
+ * Routes to the optimal LLM provider based on task characteristics,
+ * NOT the agent's name. Any domain, any number of agents.
  */
-async function runAgent(definition: AgentDefinition, input: AgentInput): Promise<AgentOutput> {
+async function runAgent(
+  definition: AgentDefinition,
+  input: AgentInput,
+  agentIndex: number = 0,
+  totalAgents: number = 10,
+): Promise<AgentOutput> {
   const startTime = Date.now();
 
   try {
     const userPrompt = definition.userPromptBuilder(input);
+    const messages = buildMessages(definition.systemPrompt, userPrompt, input.imageUrl);
 
-    const result = await invokeLLM({
-      messages: buildMessages(definition.systemPrompt, userPrompt, input.imageUrl),
+    // Route through Ara's nervous system — picks the best provider
+    // based on task weight and vision requirements, NOT agent name
+    const result = await invokeRoutedLLM({
+      messages,
+      needsVision: definition.needsVision || false,
+      taskWeight: definition.taskWeight || 'standard',
+      agentIndex,
+      totalAgents,
       response_format: { type: "json_object" },
     });
 
@@ -866,7 +915,8 @@ async function runAgent(definition: AgentDefinition, input: AgentInput): Promise
 }
 
 /**
- * Analyze the engineering drawing — shared context for all agents
+ * Analyze the engineering drawing — shared context for all agents.
+ * Uses vision-capable provider through the routing layer.
  */
 async function analyzeDrawing(input: AgentInput): Promise<string> {
   if (!input.imageUrl) {
@@ -874,7 +924,7 @@ async function analyzeDrawing(input: AgentInput): Promise<string> {
   }
 
   try {
-    const result = await invokeLLM({
+    const result = await invokeRoutedLLM({
       messages: [
         {
           role: "system" as const,
@@ -888,6 +938,8 @@ async function analyzeDrawing(input: AgentInput): Promise<string> {
           ],
         },
       ],
+      needsVision: true,
+      taskWeight: 'heavy',
     });
 
     const content = result.choices[0].message.content;
@@ -929,7 +981,7 @@ export function getAgentsForDomain(domain: string): AgentDefinition[] {
  * Traditional: Sales → Engineering → Quality → Planning → ... (sequential, weeks)
  * Guardian:    Sales | Engineering | Quality | Planning | ... (parallel, seconds)
  */
-export async function runAllAgents(input: AgentInput, domain: string = 'manufacturing'): Promise<ProcessingResult> {
+export async function runAllAgents(input: AgentInput, domain: string = 'manufacturing', agentNames?: string[]): Promise<ProcessingResult> {
   const startTime = Date.now();
 
   // Step 1: Analyze the drawing (shared context)
@@ -937,12 +989,20 @@ export async function runAllAgents(input: AgentInput, domain: string = 'manufact
   const enrichedInput: AgentInput = { ...input, drawingDescription: drawingAnalysis };
 
   // Step 2: Get the agents for this domain
-  const agentDefinitions = getAgentsForDomain(domain);
+  let agentDefinitions = getAgentsForDomain(domain);
+
+  // Hybrid routing: if agentNames provided, only run those agents on backend
+  if (agentNames && agentNames.length > 0) {
+    agentDefinitions = agentDefinitions.filter(a => agentNames.includes(a.name));
+    console.log(`[Ara Backend] Running ${agentDefinitions.length} backend agents: ${agentDefinitions.map(a => a.name).join(', ')}`);
+  }
 
   // Step 3: Fire ALL agents simultaneously — this is the magic
+  // Each agent is routed to the optimal provider based on its task characteristics
   const parallelStart = Date.now();
+  const totalAgents = agentDefinitions.length;
   const agentResults = await Promise.all(
-    agentDefinitions.map(def => runAgent(def, enrichedInput))
+    agentDefinitions.map((def, index) => runAgent(def, enrichedInput, index, totalAgents))
   );
   const parallelDuration = Date.now() - parallelStart;
 

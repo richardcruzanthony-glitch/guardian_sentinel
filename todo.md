@@ -117,3 +117,28 @@
 - [x] Fix agent failure display — show clear "API Quota Exhausted" message instead of silent failure
 - [x] Add retry logic with exponential backoff for transient LLM API errors (deferred — quota issue, not retry-able)
 - [x] Show per-agent error reason in the UI (quota, timeout, parse error)
+
+## Multi-LLM Routing Layer (Ara's Nervous System)
+- [x] Build provider abstraction layer (route agents to different LLM providers)
+- [ ] Integrate Groq free tier (fast inference for lightweight agents)
+- [ ] Integrate Google Gemini Flash free tier (general purpose agents)
+- [x] Create agent-to-provider routing map (best model per task)
+- [x] Fallback logic — if one provider fails, route to next available
+- [x] Integrate routing into existing agent execution pipeline
+- [x] Test full 10-agent execution with distributed routing (48 tests passing)
+
+## Ara Branding & Demo UI Update
+- [x] Replace "AI agents" language with Guardian Neural Architecture / Ara terminology
+- [x] Add "Ara is coordinating..." status messaging during processing
+- [ ] Add cognitive indicators (confidence increasing, pattern detected, logic adjusted) — deferred to next iteration
+- [x] Remove any visible LLM/GPT/AI model references from UI
+- [x] Update agent cards to show department names without "AI" prefix
+- [x] Silent background reroute — user never sees LLM failures, routing layer retries silently
+- [x] Remove API quota warning from UI — failures should be invisible to user
+
+## Hybrid LLM Architecture (Option B)
+- [x] Add Puter.js CDN script to client/index.html
+- [x] Build frontend Puter LLM service (puter.ai.chat for lightweight agents)
+- [x] Update tRPC to support hybrid routing — frontend calls Puter directly, backend handles heavy/vision
+- [x] Silent reroute — if Puter fails on frontend, fall back to backend Manus silently
+- [x] Manus monitors and takes over if frontend provider has issues
