@@ -18,6 +18,11 @@ function Router() {
 }
 
 function App() {
+  // NOTE: Puter.js auth is NOT triggered on page load because it hijacks the page.
+  // Instead, Puter auth is triggered only when the user clicks Process (via the hybrid orchestrator).
+  // If Puter is already authenticated (return visit), it works instantly.
+  // If not, the system routes all agents through the backend.
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">

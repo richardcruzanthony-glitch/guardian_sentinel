@@ -73,6 +73,26 @@ function getProviders(): LLMProvider[] {
     });
   }
 
+  // Anthropic Claude — premium reasoning, strong for legal/analysis
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (anthropicKey) {
+    providers.push({
+      name: 'claude',
+      endpoint: 'https://api.anthropic.com/v1/messages',
+      apiKey: anthropicKey,
+      model: 'claude-3-5-haiku-20241022',
+      supportsVision: true,
+      supportsJsonMode: true,
+      maxTokens: 4096,
+      healthy: true,
+      consecutiveFailures: 0,
+      maxFailures: 3,
+      circuitBrokenAt: 0,
+      recoveryWindow: 20000,
+      useCustomSdk: true, // Claude uses non-OpenAI-compatible API
+    });
+  }
+
   // Groq — blazing fast, free tier, OpenAI-compatible
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
@@ -350,9 +370,31 @@ async function callProvider(
     return callPuterProvider(provider, messages, response_format);
   }
 
+  // Claude uses Anthropic's non-OpenAI-compatible API
+  if (provider.useCustomSdk && provider.name === 'claude') {
+    return callClaudeProvider(provider, messages, response_format);
+  }
+
+  // For non-vision providers (like Groq), strip image content from messages
+  // Groq requires messages[].content to be a string, not an array
+  let processedMessages = messages;
+  if (!provider.supportsVision) {
+    processedMessages = messages.map((msg: any) => {
+      if (Array.isArray(msg.content)) {
+        // Extract only text parts, skip image_url parts
+        const textParts = msg.content
+          .filter((part: any) => part.type === 'text')
+          .map((part: any) => part.text)
+          .join('\n');
+        return { ...msg, content: textParts || 'Analyze the provided information.' };
+      }
+      return msg;
+    });
+  }
+
   const payload: Record<string, unknown> = {
     model: provider.model,
-    messages,
+    messages: processedMessages,
     max_tokens: provider.maxTokens,
   };
 
@@ -424,7 +466,110 @@ export function getTotalProviderCount(): number {
   return providerPool.length;
 }
 
-// ─── Puter.js Provider (SDK-based) ─────────────────────────────────
+// ─── Claude/Anthropic Provider (Messages API) ──────────────────────────────
+
+async function callClaudeProvider(
+  provider: LLMProvider,
+  messages: any[],
+  response_format?: any,
+): Promise<RoutedLLMResult> {
+  // Convert OpenAI-style messages to Anthropic format
+  // Anthropic uses separate 'system' parameter, not in messages array
+  let systemPrompt = '';
+  const anthropicMessages: any[] = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'system') {
+      systemPrompt += (typeof msg.content === 'string' ? msg.content : 
+        Array.isArray(msg.content) ? msg.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('\n') : '');
+    } else {
+      // Convert content arrays for Claude's format
+      let content: any;
+      if (Array.isArray(msg.content)) {
+        content = msg.content.map((part: any) => {
+          if (part.type === 'text') return { type: 'text', text: part.text };
+          if (part.type === 'image_url') {
+            // Claude uses base64 or URL for images
+            const url = part.image_url?.url || '';
+            if (url.startsWith('data:')) {
+              const match = url.match(/^data:(image\/\w+);base64,(.+)$/);
+              if (match) {
+                return {
+                  type: 'image',
+                  source: { type: 'base64', media_type: match[1], data: match[2] },
+                };
+              }
+            }
+            return { type: 'text', text: `[Image: ${url}]` };
+          }
+          return part;
+        });
+      } else {
+        content = msg.content;
+      }
+      anthropicMessages.push({ role: msg.role, content });
+    }
+  }
+
+  // Add JSON instruction to system prompt if needed
+  if (response_format) {
+    systemPrompt += '\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown, no code blocks, just raw JSON.';
+  }
+
+  const payload: Record<string, unknown> = {
+    model: provider.model,
+    max_tokens: provider.maxTokens,
+    messages: anthropicMessages,
+  };
+  if (systemPrompt) {
+    payload.system = systemPrompt;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+
+  try {
+    const response = await fetch(provider.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': provider.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `${provider.name} (${response.status}): ${errorText.substring(0, 200)}`
+      );
+    }
+
+    const data = await response.json();
+
+    // Normalize Anthropic response to RoutedLLMResult format
+    const content = data.content?.map((block: any) => block.text).join('') || '';
+
+    return {
+      choices: [{
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: content,
+        },
+        finish_reason: data.stop_reason || 'stop',
+      }],
+      _provider: 'claude',
+      _model: provider.model,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// ─── Puter.js Provider (SDK-based) ─────────────────────────────────────────
 
 let puterInstance: any = null;
 

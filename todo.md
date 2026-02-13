@@ -120,8 +120,8 @@
 
 ## Multi-LLM Routing Layer (Ara's Nervous System)
 - [x] Build provider abstraction layer (route agents to different LLM providers)
-- [ ] Integrate Groq free tier (fast inference for lightweight agents)
-- [ ] Integrate Google Gemini Flash free tier (general purpose agents)
+- [x] Integrate Groq free tier (fast inference for lightweight agents)
+- [x] Integrate Google Gemini Flash free tier (general purpose agents)
 - [x] Create agent-to-provider routing map (best model per task)
 - [x] Fallback logic — if one provider fails, route to next available
 - [x] Integrate routing into existing agent execution pipeline
@@ -170,3 +170,10 @@
 - [x] Create Puter AI adapter for hybrid orchestrator
 - [x] Wire Puter as fallback in hybrid orchestrator when server is exhausted
 - [x] Remove 'out of tokens' / 'usage exhausted' error from UI (router handles silently)
+- [x] Test full Manufacturing domain end-to-end with engineering file (10/10 agents, 9.6s via Groq)
+- [x] Fix any issues preventing agents from running through Puter.js
+- [x] Trigger Puter auth silently on page load (background, before user clicks Process)
+- [x] Graceful fallback if popup blocked — route all through backend
+- [x] Add Claude/Anthropic as premium LLM provider (key valid, needs billing credits)
+- [x] Add Groq as free LLM provider (working, all 10 agents completed in 9.6s)
+- [x] Fix Groq multimodal message format (strip images for text-only providers)
