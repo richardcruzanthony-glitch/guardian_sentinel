@@ -356,15 +356,7 @@ export default function Home() {
     }));
   }, [processingResult, isProcessing, liveAgentStatuses]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-accent" />
-      </div>
-    );
-  }
-
-  // Domain-specific background gradients
+  // Domain-specific background gradients — must be before early return to satisfy React hooks rules
   const domainBg = useMemo(() => {
     switch (domain) {
       case 'defense':
@@ -377,6 +369,14 @@ export default function Home() {
         return 'radial-gradient(ellipse at 20% 30%, rgba(0, 217, 255, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(0, 255, 65, 0.04) 0%, transparent 50%)';
     }
   }, [domain]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div
