@@ -99,3 +99,15 @@
 - [x] Update UI with medical-specific terminology, colors, and result display
 - [x] Run live performance test on medical dispatch scenario (10.51s, 10 agents, 7x speed)
 - [x] Write vitest tests for medical dispatch domain agents (11 tests passing)
+
+## Major Demo Update
+- [x] Build full shop-ready compliance package viewer (RFQ, routing, FAI, bubble notation, inspection, shipping)
+- [x] AS9100 Rev D compliance package as default manufacturing output
+- [x] Make documents viewable in-browser (expandable document viewer)
+- [x] Remove file upload from Kill Chain domain (scenario text only)
+- [x] Remove file upload from Medical Dispatch domain (scenario text only)
+- [x] Reposition Guardian OS messaging — learning, self-reflecting, adjusting digital brain
+- [x] Clarify Guardian sits atop existing systems, non-intrusive, links everything into single unit
+- [x] Fix time comparison — Guardian parallel vs manual research and handoff (no AI comparison)
+- [x] Add SEO meta description and keywords
+- [x] Add custom notification system (notifies owner on processing complete)

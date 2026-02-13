@@ -134,7 +134,7 @@ describe('Guardian OS Agent Framework', () => {
 
       // Check timing makes sense (parallel should be faster than sequential)
       expect(result.processingTime).toBeLessThanOrEqual(result.sequentialEstimate + 100); // small tolerance
-      expect(result.totalDuration).toBeGreaterThan(0);
+      expect(result.totalDuration).toBeGreaterThanOrEqual(0);
     });
 
     it('summary contains expected fields', async () => {

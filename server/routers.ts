@@ -6,6 +6,7 @@ import { z } from "zod";
 import { runAllAgents, getAgentsForDomain } from "./agents";
 import { saveManufacturingQuote, getManufacturingQuotes, saveLearningMetric, getLearningMetrics, saveAgentLog, getAgentLogs, saveCompliancePackage, getCompliancePackages } from "./db";
 import { storagePut } from "./storage";
+import { notifyOwner } from "./_core/notification";
 
 export const appRouter = router({
   system: systemRouter,
@@ -76,6 +77,16 @@ export const appRouter = router({
             quantity: input.quantity,
             imageUrl: input.imageUrl,
           }, input.domain);
+
+          // Send notification to owner
+          try {
+            await notifyOwner({
+              title: `Guardian OS — ${input.domain.charAt(0).toUpperCase() + input.domain.slice(1)} Processing Complete`,
+              content: `Domain: ${input.domain}\nFile: ${input.fileName}\nAgents: ${result.agents.length}\nParallel Time: ${result.processingTime.toFixed(1)}s\nSpeed Multiplier: ${result.speedMultiplier.toFixed(1)}x\nConfidence: ${(result.summary.confidence * 100).toFixed(0)}%`,
+            });
+          } catch (e) {
+            console.warn('Notification failed:', e);
+          }
 
           return {
             success: true,
