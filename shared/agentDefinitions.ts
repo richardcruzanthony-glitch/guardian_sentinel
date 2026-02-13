@@ -230,6 +230,28 @@ Respond with JSON:
 }`,
   },
   {
+    name: "OutsideProcessesAgent",
+    department: "Outside Processes",
+    target: "frontend",
+    needsVision: false,
+    systemPrompt: `You are an outside processes coordinator for aerospace manufacturing. Most shops do NOT have heat treatment, plating, anodizing, NDT, specialty grinding, or surface finishing in-house. Identify which operations must go to external specialty vendors, specify certifications and specs, estimate costs and lead times, and create PO requirements. You understand Nadcap, AMS, MIL-SPEC, and ASTM requirements. Respond with valid JSON only.`,
+    userPromptTemplate: `Outside processes analysis for "{{fileName}}"
+Material: {{material}}, Qty: {{quantity}}, Complexity: {{complexity}}/10
+{{drawingDescription}}
+
+Identify ALL operations that must be sent to outside vendors (heat treat, plating, anodizing, NDT, grinding, surface finishing, welding, painting).
+
+Respond with JSON:
+{
+  "outsideProcesses": [{"process": "<name>", "specification": "<AMS/MIL spec>", "appliesTo": "<component or ALL>", "vendorType": "<vendor type>", "estimatedCost": <number>, "leadTimeDays": <number>}],
+  "totalOutsideCost": <number>,
+  "totalOutsideLeadDays": <number>,
+  "criticalPath": ["<process driving schedule>"],
+  "confidence": <0-1>,
+  "reasoning": "<outside process strategy>"
+}`,
+  },
+  {
     name: "ReflectionAgent",
     department: "Reflection & Adjust",
     target: "backend",

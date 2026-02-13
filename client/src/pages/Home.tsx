@@ -34,7 +34,7 @@ const DOMAIN_CONFIG = {
       { dept: 'Quote Approval', time: '1-2 days' },
     ],
     traditionalTotal: '2-3 weeks',
-    guardianDepts: ['Sales', 'Eng', 'Quality', 'Plan', 'Procure', 'Mfg', 'Ship', 'Comply', 'Audit', 'Reflect'],
+    guardianDepts: ['Sales', 'Eng', 'Quality', 'Plan', 'Procure', 'Mfg', 'Ship', 'Comply', 'Audit', 'Outside', 'Reflect'],
     paramLabel1: 'Material',
     paramLabel2: 'Complexity',
     paramLabel3: 'Quantity',

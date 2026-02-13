@@ -177,3 +177,9 @@
 - [x] Add Claude/Anthropic as premium LLM provider (key valid, needs billing credits)
 - [x] Add Groq as free LLM provider (working, all 10 agents completed in 9.6s)
 - [x] Fix Groq multimodal message format (strip images for text-only providers)
+
+## Outside Processes Agent
+- [x] Add OutsideProcessesAgent to shared/agentDefinitions.ts
+- [x] Add OutsideProcessesAgent to server/agents.ts (backend)
+- [x] Add 'Outside' to Manufacturing guardianDepts in Home.tsx
+- [x] Add Outside Processes PO Requirements document to CompliancePackage component

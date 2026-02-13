@@ -49,19 +49,19 @@ vi.mock('./llmRouter', () => ({
 
 describe('Guardian OS Agent Framework', () => {
   describe('getAgentsForDomain', () => {
-    it('returns 10 agents for manufacturing domain', () => {
+    it('returns 11 agents for manufacturing domain', () => {
       const agents = getAgentsForDomain('manufacturing');
-      expect(agents).toHaveLength(10);
+      expect(agents).toHaveLength(11);
     });
 
-    it('returns 10 agents for aerospace domain', () => {
+    it('returns 11 agents for aerospace domain', () => {
       const agents = getAgentsForDomain('aerospace');
-      expect(agents).toHaveLength(10);
+      expect(agents).toHaveLength(11);
     });
 
     it('returns manufacturing agents as default for unknown domains', () => {
       const agents = getAgentsForDomain('unknown');
-      expect(agents).toHaveLength(10);
+      expect(agents).toHaveLength(11);
     });
 
     it('includes all required departments for manufacturing', () => {
@@ -77,6 +77,7 @@ describe('Guardian OS Agent Framework', () => {
       expect(departments).toContain('Shipping');
       expect(departments).toContain('Compliance');
       expect(departments).toContain('Audit');
+      expect(departments).toContain('Outside Processes');
       expect(departments).toContain('Reflection & Adjust');
     });
 
@@ -139,14 +140,14 @@ describe('Guardian OS Agent Framework', () => {
       expect(result).toHaveProperty('processingTime');
       expect(result).toHaveProperty('sequentialEstimate');
       expect(result).toHaveProperty('speedMultiplier');
-      expect(result).toHaveProperty('agentCount', 10);
+      expect(result).toHaveProperty('agentCount', 11);
       expect(result).toHaveProperty('domain', 'manufacturing');
       expect(result).toHaveProperty('agents');
       expect(result).toHaveProperty('drawingAnalysis');
       expect(result).toHaveProperty('summary');
 
-      // Check all 10 agents ran
-      expect(result.agents).toHaveLength(10);
+      // Check all 11 agents ran
+      expect(result.agents).toHaveLength(11);
 
       // Check each agent has required output fields
       for (const agent of result.agents) {

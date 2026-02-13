@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -31,6 +31,7 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
   const complianceData = agents.find((a: any) => a.agentName === 'ComplianceAgent')?.data || {};
   const shippingData = agents.find((a: any) => a.agentName === 'ShippingAgent')?.data || {};
   const auditData = agents.find((a: any) => a.agentName === 'AuditAgent')?.data || {};
+  const outsideProcessesData = agents.find((a: any) => a.agentName === 'OutsideProcessesAgent')?.data || {};
 
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const quoteNumber = `GOS-${Date.now().toString(36).toUpperCase()}`;
@@ -389,6 +390,88 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
           <div>
             <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Audit Trail</p>
             <p>{auditData.reasoning || 'Full traceability maintained from raw material receipt through final shipment. All quality records retained per AS9100 Rev D Section 4.2.4.'}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'outside-processes',
+      title: 'Outside Processes PO Requirements',
+      icon: <ExternalLink className="w-5 h-5 text-orange-400" />,
+      content: (
+        <div className="font-mono text-xs space-y-4 text-foreground/90">
+          <div className="border-b border-border pb-3">
+            <p className="text-lg font-bold text-orange-400">OUTSIDE PROCESSES — PO REQUIREMENTS</p>
+            <p className="text-muted-foreground">External Vendor Operations — {result.fileName}</p>
+          </div>
+          <div className="bg-orange-500/10 border border-orange-500/30 rounded p-3 mb-3">
+            <p className="text-orange-400 font-semibold text-[11px] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> NOTICE: These operations require certified outside vendors
+            </p>
+            <p className="text-muted-foreground text-[10px] mt-1">All outside processes must be performed by Nadcap-accredited or customer-approved suppliers per AS9100 Rev D Section 8.4.</p>
+          </div>
+          <table className="w-full border border-border text-[11px]">
+            <thead>
+              <tr className="bg-card">
+                <th className="border border-border p-2 text-left">Process</th>
+                <th className="border border-border p-2 text-left">Specification</th>
+                <th className="border border-border p-2 text-left">Applies To</th>
+                <th className="border border-border p-2 text-left">Vendor Type</th>
+                <th className="border border-border p-2 text-right">Est. Cost</th>
+                <th className="border border-border p-2 text-right">Lead (days)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(outsideProcessesData.outsideProcesses || [
+                { process: 'Heat Treatment', specification: 'AMS 2759', appliesTo: 'All steel components', vendorType: 'Nadcap Heat Treat', estimatedCost: 150, leadTimeDays: 5 },
+                { process: 'Anodize Type III', specification: 'MIL-A-8625 Type III', appliesTo: 'Aluminum components', vendorType: 'Nadcap Surface Treatment', estimatedCost: 85, leadTimeDays: 3 },
+                { process: 'NDT — Magnetic Particle', specification: 'ASTM E1444', appliesTo: 'Critical load-bearing parts', vendorType: 'Nadcap NDT', estimatedCost: 75, leadTimeDays: 2 },
+                { process: 'Passivation', specification: 'ASTM A967 / AMS 2700', appliesTo: 'Stainless steel parts', vendorType: 'Chemical Processing', estimatedCost: 45, leadTimeDays: 2 },
+              ] as any[]).map((op: any, i: number) => (
+                <tr key={i}>
+                  <td className="border border-border p-2 font-semibold text-orange-400">{op.process || op.name}</td>
+                  <td className="border border-border p-2">{op.specification || op.spec || '—'}</td>
+                  <td className="border border-border p-2">{op.appliesTo || op.component || 'All'}</td>
+                  <td className="border border-border p-2">{op.vendorType || op.vendor || 'Certified Vendor'}</td>
+                  <td className="border border-border p-2 text-right">${(op.estimatedCost || 0).toLocaleString()}</td>
+                  <td className="border border-border p-2 text-right">{op.leadTimeDays || op.leadTime || '—'}</td>
+                </tr>
+              ))}
+              <tr className="font-bold bg-orange-500/10">
+                <td className="border border-border p-2" colSpan={4}>TOTAL OUTSIDE PROCESS COST & LEAD TIME</td>
+                <td className="border border-border p-2 text-right text-orange-400">
+                  ${(outsideProcessesData.totalOutsideCost || (Array.isArray(outsideProcessesData.outsideProcesses) ? (outsideProcessesData.outsideProcesses as any[]).reduce((sum: number, op: any) => sum + (op.estimatedCost || 0), 0) : 355)).toLocaleString()}
+                </td>
+                <td className="border border-border p-2 text-right text-orange-400">
+                  {outsideProcessesData.totalOutsideLeadDays || (Array.isArray(outsideProcessesData.outsideProcesses) ? Math.max(...(outsideProcessesData.outsideProcesses as any[]).map((op: any) => op.leadTimeDays || 0)) : 5)} days
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">PO Requirements</p>
+              <ul className="space-y-1">
+                <li>• Include drawing number and revision on all POs</li>
+                <li>• Specify process specification (AMS/MIL/ASTM) on PO</li>
+                <li>• Require Certificate of Conformance from vendor</li>
+                <li>• Require test reports per applicable specification</li>
+                <li>• Nadcap accreditation number must be on vendor C of C</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Scheduling Notes</p>
+              <ul className="space-y-1">
+                <li>• Schedule outside processes into manufacturing routing</li>
+                <li>• Allow transit time (1-2 days each way) in lead time</li>
+                <li>• Critical path: {Array.isArray(outsideProcessesData.criticalPath) ? outsideProcessesData.criticalPath.join(' → ') : 'Heat Treatment → Anodize'}</li>
+                <li>• Receiving inspection required upon return from vendor</li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Strategy</p>
+            <p>{(outsideProcessesData.reasoning as string) || 'Outside processes are sequenced to minimize total lead time. Heat treatment is performed before surface finishing. All vendors must be on the Approved Supplier List per AS9100 Rev D Section 8.4.'}</p>
           </div>
         </div>
       ),
