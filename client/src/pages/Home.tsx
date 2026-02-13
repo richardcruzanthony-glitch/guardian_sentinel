@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight, Crosshair, Factory, Ambulance, Brain, Layers, RefreshCw, Scale, FileText, Download } from "lucide-react";
+import { Upload, Zap, Shield, Activity, Clock, ChevronDown, ChevronUp, FileImage, Loader2, ArrowRight, Crosshair, Factory, Ambulance, Brain, Layers, RefreshCw, Scale, FileText, Download, AlertCircle, Info, Plus, X, CheckCircle2 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useState, useCallback, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
@@ -364,13 +364,35 @@ export default function Home() {
     );
   }
 
+  // Domain-specific background gradients
+  const domainBg = useMemo(() => {
+    switch (domain) {
+      case 'defense':
+        return 'radial-gradient(ellipse at 20% 30%, rgba(239, 68, 68, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(239, 68, 68, 0.04) 0%, transparent 50%)';
+      case 'medical':
+        return 'radial-gradient(ellipse at 20% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(59, 130, 246, 0.04) 0%, transparent 50%)';
+      case 'legal':
+        return 'radial-gradient(ellipse at 20% 30%, rgba(168, 85, 247, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(168, 85, 247, 0.04) 0%, transparent 50%)';
+      default: // manufacturing
+        return 'radial-gradient(ellipse at 20% 30%, rgba(0, 217, 255, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(0, 255, 65, 0.04) 0%, transparent 50%)';
+    }
+  }, [domain]);
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className="min-h-screen bg-background text-foreground transition-all duration-700"
+      style={{ backgroundImage: domainBg, backgroundAttachment: 'fixed' }}
+    >
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className={`border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 transition-colors duration-500 ${
+        domain === 'defense' ? 'border-red-500/30' :
+        domain === 'medical' ? 'border-blue-500/30' :
+        domain === 'legal' ? 'border-purple-500/30' :
+        'border-accent/30'
+      }`}>
         <div className="container py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg ${domain === 'defense' ? 'bg-red-500' : domain === 'medical' ? 'bg-blue-500' : 'bg-accent'} flex items-center justify-center`}>
+            <div className={`w-10 h-10 rounded-lg transition-colors duration-500 ${domain === 'defense' ? 'bg-red-500' : domain === 'medical' ? 'bg-blue-500' : domain === 'legal' ? 'bg-purple-500' : 'bg-accent'} flex items-center justify-center`}>
               <Brain className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -502,8 +524,8 @@ export default function Home() {
             </div>
 
             {/* Guardian: Parallel Architecture */}
-            <div className={`p-5 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : 'border-accent/30 bg-accent/5'}`}>
-              <p className={`text-xs ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'} uppercase tracking-wider mb-3 font-semibold`}>
+            <div className={`p-5 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : domain === 'legal' ? 'border-purple-500/30 bg-purple-500/5' : 'border-accent/30 bg-accent/5'}`}>
+              <p className={`text-xs ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : domain === 'legal' ? 'text-purple-400' : 'text-accent'} uppercase tracking-wider mb-3 font-semibold`}>
                 Guardian OS — Neural Architecture
               </p>
               <div className="flex items-center gap-1 text-xs flex-wrap mb-3">
@@ -513,13 +535,15 @@ export default function Home() {
                       ? 'bg-red-500/20 text-red-400 border-red-500/30' 
                       : domain === 'medical'
                         ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                        : 'bg-accent/20 text-accent border-accent/30'
+                        : domain === 'legal'
+                          ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+                          : 'bg-accent/20 text-accent border-accent/30'
                   }`}>
                     {dept}
                   </span>
                 ))}
               </div>
-              <p className={`text-sm ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'} font-semibold`}>
+              <p className={`text-sm ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : domain === 'legal' ? 'text-purple-400' : 'text-accent'} font-semibold`}>
                 <Zap className="w-3 h-3 inline mr-1" />
                 All fire simultaneously — seconds, not {domain === 'defense' ? 'hours' : domain === 'medical' ? 'minutes' : 'weeks'}
               </p>
@@ -595,56 +619,120 @@ export default function Home() {
               </div>
             )}
 
-            {/* Legal: Description + Document Upload */}
+            {/* Legal: Description + Document Upload — Combined Intake */}
             {domain === 'legal' && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">Describe Your Legal Situation</label>
-                  <textarea
-                    value={legalDescription}
-                    onChange={(e) => setLegalDescription(e.target.value)}
-                    placeholder="Describe your legal issue in plain language... e.g., 'My landlord is refusing to return my $3,200 security deposit after I moved out of my apartment in Los Angeles. The lease ended on January 15, 2026. I left the apartment in good condition with photos to prove it. The landlord has not provided an itemized list of deductions within 21 days as required.'"
-                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm min-h-[140px] resize-y placeholder:text-muted-foreground/50"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div
-                    className="border-2 border-dashed border-purple-500/30 rounded-lg p-4 text-center cursor-pointer transition-all hover:border-purple-500 hover:bg-purple-500/5"
-                  >
-                    <input
-                      type="file"
-                      accept="image/*,.pdf,.doc,.docx,.txt"
-                      onChange={handleLegalFileSelect}
-                      className="hidden"
-                      id="legal-file-input"
-                      multiple
-                    />
-                    <label htmlFor="legal-file-input" className="cursor-pointer">
-                      <FileText className="w-8 h-8 text-purple-400/60 mx-auto mb-2" />
-                      <p className="text-sm font-semibold text-foreground mb-1">
-                        {legalFiles.length > 0 ? `${legalFiles.length} document(s) uploaded` : 'Upload Supporting Documents'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Contracts, leases, court papers, letters, photos (optional)</p>
-                    </label>
+                {/* Guidance Banner */}
+                <div className="p-3 rounded-lg border border-purple-500/20 bg-purple-500/5 flex items-start gap-3">
+                  <Info className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-purple-300">Best Results: Describe + Upload</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Provide a written description of your situation <strong className="text-foreground">and</strong> upload any supporting documents (contracts, leases, court papers, photos). 
+                      Combining both gives Ara the most complete picture for accurate analysis.
+                    </p>
                   </div>
-                  {legalFilePreview ? (
-                    <div className="border border-purple-500/30 rounded-lg overflow-hidden bg-white">
-                      <img src={legalFilePreview} alt="Document Preview" className="w-full h-full object-contain max-h-48" />
+                </div>
+
+                {/* Two-Column: Description + Upload Side by Side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Left: Written Description */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold">1</span>
+                      Describe Your Situation
+                    </label>
+                    <textarea
+                      value={legalDescription}
+                      onChange={(e) => setLegalDescription(e.target.value)}
+                      placeholder="Describe your legal issue in plain language...&#10;&#10;Example: 'My landlord is refusing to return my $3,200 security deposit after I moved out of my apartment in Los Angeles. The lease ended on January 15, 2026. I left the apartment in good condition with photos to prove it. The landlord has not provided an itemized list of deductions within 21 days as required.'"
+                      className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm min-h-[180px] resize-y placeholder:text-muted-foreground/50"
+                    />
+                    {legalDescription.trim().length > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-green-400">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Description provided ({legalDescription.trim().length} characters)</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Document Upload */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold">2</span>
+                      Upload Supporting Documents
+                    </label>
+                    <div
+                      className="border-2 border-dashed border-purple-500/30 rounded-lg p-4 text-center cursor-pointer transition-all hover:border-purple-500 hover:bg-purple-500/5 min-h-[100px] flex flex-col items-center justify-center"
+                    >
+                      <input
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx,.txt"
+                        onChange={handleLegalFileSelect}
+                        className="hidden"
+                        id="legal-file-input"
+                        multiple
+                      />
+                      <label htmlFor="legal-file-input" className="cursor-pointer w-full">
+                        <Upload className="w-7 h-7 text-purple-400/60 mx-auto mb-2" />
+                        <p className="text-sm font-semibold text-foreground mb-1">
+                          {legalFiles.length > 0 ? `${legalFiles.length} document(s) attached` : 'Drop files or click to upload'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Contracts, leases, court papers, letters, photos</p>
+                      </label>
                     </div>
-                  ) : legalFiles.length > 0 ? (
-                    <div className="border border-purple-500/30 rounded-lg p-4 bg-card/30 space-y-2">
-                      {legalFiles.map((f, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <FileText className="w-3 h-3 text-purple-400" />
-                          <span className="truncate">{f.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="border border-border rounded-lg p-4 flex items-center justify-center bg-card/30">
-                      <p className="text-xs text-muted-foreground text-center">Document previews will appear here</p>
-                    </div>
-                  )}
+
+                    {/* Uploaded Files List */}
+                    {legalFiles.length > 0 && (
+                      <div className="space-y-1.5">
+                        {legalFiles.map((f, i) => (
+                          <div key={i} className="flex items-center justify-between p-2 rounded border border-purple-500/20 bg-purple-500/5">
+                            <div className="flex items-center gap-2 text-xs text-foreground min-w-0">
+                              <FileText className="w-3 h-3 text-purple-400 shrink-0" />
+                              <span className="truncate">{f.name}</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newFiles = legalFiles.filter((_, idx) => idx !== i);
+                                setLegalFiles(newFiles);
+                                if (newFiles.length === 0) setLegalFilePreview(null);
+                                else if (newFiles[0]?.type.startsWith('image/')) {
+                                  const reader = new FileReader();
+                                  reader.onload = () => setLegalFilePreview(reader.result as string);
+                                  reader.readAsDataURL(newFiles[0]);
+                                }
+                              }}
+                              className="text-muted-foreground hover:text-red-400 transition-colors p-0.5"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <label htmlFor="legal-file-input" className="flex items-center gap-1 text-xs text-purple-400 cursor-pointer hover:text-purple-300 transition-colors pt-1">
+                          <Plus className="w-3 h-3" /> Add more documents
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Image Preview */}
+                    {legalFilePreview && (
+                      <div className="border border-purple-500/30 rounded-lg overflow-hidden bg-white">
+                        <img src={legalFilePreview} alt="Document Preview" className="w-full object-contain max-h-40" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Intake Status Summary */}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+                  <div className={`flex items-center gap-1 ${legalDescription.trim().length > 20 ? 'text-green-400' : ''}`}>
+                    {legalDescription.trim().length > 20 ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                    Written description {legalDescription.trim().length > 20 ? '\u2713' : '(recommended)'}
+                  </div>
+                  <div className={`flex items-center gap-1 ${legalFiles.length > 0 ? 'text-green-400' : ''}`}>
+                    {legalFiles.length > 0 ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                    Documents {legalFiles.length > 0 ? `(${legalFiles.length}) \u2713` : '(recommended)'}
+                  </div>
                 </div>
               </div>
             )}
@@ -875,19 +963,19 @@ export default function Home() {
         {processingResult && (
           <div className="space-y-6">
             {/* Speed Comparison: Guardian vs Manual Process */}
-            <div className={`p-6 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : 'border-accent/30 bg-accent/5'}`}>
+            <div className={`p-6 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : domain === 'legal' ? 'border-purple-500/30 bg-purple-500/5' : 'border-accent/30 bg-accent/5'}`}>
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-4 text-center">
                 Ara Neural Architecture vs. Current Standard (Manual Research & Handoff)
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Departments Coordinated</p>
-                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`}>{processingResult.agentCount}</p>
+                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : domain === 'legal' ? 'text-purple-400' : 'text-accent'}`}>{processingResult.agentCount}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">coordinated simultaneously</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Guardian Time</p>
-                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`}>{(processingResult.totalDuration / 1000).toFixed(1)}s</p>
+                  <p className={`text-3xl font-bold ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : domain === 'legal' ? 'text-purple-400' : 'text-accent'}`}>{(processingResult.totalDuration / 1000).toFixed(1)}s</p>
                   <p className="text-[10px] text-muted-foreground mt-1">parallel processing</p>
                 </div>
                 <div>
@@ -897,7 +985,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Improvement</p>
-                  <p className="text-3xl font-bold" style={{ color: domain === 'defense' ? '#FF4444' : domain === 'medical' ? '#60A5FA' : '#00FF41' }}>
+                  <p className="text-3xl font-bold" style={{ color: domain === 'defense' ? '#FF4444' : domain === 'medical' ? '#60A5FA' : domain === 'legal' ? '#A855F7' : '#00FF41' }}>
                     {domain === 'manufacturing' ? '99.8%' : domain === 'defense' ? '99.6%' : domain === 'legal' ? '99.5%' : '99.4%'}
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-1">time reduction</p>
@@ -909,7 +997,7 @@ export default function Home() {
             <Card className="border-border bg-card/50 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Activity className={`w-5 h-5 ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : 'text-accent'}`} />
+                  <Activity className={`w-5 h-5 ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : domain === 'legal' ? 'text-purple-400' : 'text-accent'}`} />
                   {domain === 'defense' ? 'Ara — Kill Chain Coordination' : domain === 'medical' ? 'Ara — Emergency Response Coordination' : domain === 'legal' ? 'Ara — Legal Analysis Coordination' : 'Ara — Department Coordination'}
                 </CardTitle>
               </CardHeader>

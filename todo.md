@@ -159,3 +159,7 @@
 - [x] Code input UI before processing (can swap to link-based codes later)
 - [x] Add county input field to legal domain (courts are county-level)
 - [x] Pass county to agent prompts for jurisdiction-specific filing
+- [x] Legal intake: support both description AND document upload together (not either/or)
+- [x] Add guidance text that combining description + documents gives best results
+- [x] Add proceed options after intake (Analyze Case, Upload More Documents, etc.)
+- [x] Domain-specific background color/gradient when tabs are selected (mfg=cyan, defense=red, medical=blue, legal=purple)
