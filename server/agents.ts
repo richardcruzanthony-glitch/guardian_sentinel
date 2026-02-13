@@ -982,14 +982,28 @@ export async function runAllAgents(input: AgentInput, domain: string = 'manufact
       confidence: Math.round(avgConfidence * 100) / 100,
     };
   } else {
-    const salesData = agentResults.find(a => a.agentName === 'SalesAgent')?.data || {};
-    const planningData = agentResults.find(a => a.agentName === 'PlanningAgent')?.data || {};
-    const complianceData = agentResults.find(a => a.agentName === 'ComplianceAgent')?.data || {};
+    // Robust extraction — try multiple agents for each field
+    const salesData = agentResults.find(a => a.agentName === 'SalesAgent' && a.status === 'completed')?.data || {};
+    const costData = agentResults.find(a => a.agentName === 'CostAgent' && a.status === 'completed')?.data || {};
+    const planningData = agentResults.find(a => a.agentName === 'PlanningAgent' && a.status === 'completed')?.data || {};
+    const mfgData = agentResults.find(a => a.agentName === 'ManufacturingAgent' && a.status === 'completed')?.data || {};
+    const complianceData = agentResults.find(a => a.agentName === 'ComplianceAgent' && a.status === 'completed')?.data || {};
+    const qualityData = agentResults.find(a => a.agentName === 'QualityAgent' && a.status === 'completed')?.data || {};
+
+    // Price: try Sales first, then Cost agent, then any agent with a price field
+    const price = Number(salesData.quotedPrice) || Number(salesData.totalPrice) || Number(costData.totalCost) || Number(costData.quotedPrice) || 0;
+    // Lead time: try Planning first, then Manufacturing, then any agent with lead time
+    const leadTime = Number(planningData.totalLeadTimeDays) || Number(planningData.leadTimeDays) || Number(mfgData.totalLeadTimeDays) || Number(mfgData.estimatedDays) || 0;
+    // Risk: try Compliance first, then Quality
+    const risk = String(complianceData.riskLevel || qualityData.riskLevel || 'medium');
+    // Compliance status: try Compliance agent, then Quality
+    const isCompliant = complianceData.as9100Compliant || qualityData.as9100Compliant;
+
     summary = {
-      totalPrice: Number(salesData.quotedPrice) || 0,
-      leadTimeDays: Number(planningData.totalLeadTimeDays) || 0,
-      riskLevel: String(complianceData.riskLevel || 'medium'),
-      complianceStatus: complianceData.as9100Compliant ? 'Compliant' : 'Review Required',
+      totalPrice: price,
+      leadTimeDays: leadTime,
+      riskLevel: risk,
+      complianceStatus: isCompliant ? 'Compliant' : (complianceData.error ? 'Review Required' : 'Review Required'),
       confidence: Math.round(avgConfidence * 100) / 100,
     };
   }

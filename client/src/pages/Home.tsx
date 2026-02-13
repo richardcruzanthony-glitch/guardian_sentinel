@@ -734,17 +734,23 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                  <div className="p-4 rounded-lg border border-accent/30 bg-accent/5">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Quoted Price</p>
                     <p className="text-2xl font-bold text-accent">
-                      ${processingResult.summary.totalPrice ? processingResult.summary.totalPrice.toLocaleString() : '—'}
+                      {processingResult.summary.totalPrice != null && processingResult.summary.totalPrice > 0
+                        ? `$${processingResult.summary.totalPrice.toLocaleString()}`
+                        : 'Calculating...'}
                     </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">per unit at qty {quantity}</p>
                   </div>
-                  <div className="p-4 rounded-lg border border-border bg-card/30">
+                  <div className="p-4 rounded-lg border border-accent/30 bg-accent/5">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Lead Time</p>
                     <p className="text-2xl font-bold text-foreground">
-                      {processingResult.summary.leadTimeDays || '—'} days
+                      {processingResult.summary.leadTimeDays != null && processingResult.summary.leadTimeDays > 0
+                        ? `${processingResult.summary.leadTimeDays} days`
+                        : 'Calculating...'}
                     </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">material + machining + inspection</p>
                   </div>
                   <div className="p-4 rounded-lg border border-border bg-card/30">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Risk Level</p>
@@ -752,16 +758,20 @@ export default function Home() {
                       processingResult.summary.riskLevel === 'low' ? 'text-green-400' :
                       processingResult.summary.riskLevel === 'high' ? 'text-red-400' : 'text-yellow-400'
                     }`}>
-                      {processingResult.summary.riskLevel || '—'}
+                      {processingResult.summary.riskLevel && processingResult.summary.riskLevel !== 'medium'
+                        ? processingResult.summary.riskLevel.charAt(0).toUpperCase() + processingResult.summary.riskLevel.slice(1)
+                        : processingResult.summary.riskLevel || 'Assessing...'}
                     </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">compliance assessment</p>
                   </div>
                   <div className="p-4 rounded-lg border border-border bg-card/30">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">AS9100 Compliance</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">AS9100 Rev D</p>
                     <p className={`text-2xl font-bold ${
                       processingResult.summary.complianceStatus === 'Compliant' ? 'text-green-400' : 'text-yellow-400'
                     }`}>
-                      {processingResult.summary.complianceStatus || '—'}
+                      {processingResult.summary.complianceStatus || 'Reviewing...'}
                     </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">quality management system</p>
                   </div>
                 </>
               )}

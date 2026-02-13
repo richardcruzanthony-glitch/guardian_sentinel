@@ -111,3 +111,6 @@
 - [x] Fix time comparison — Guardian parallel vs manual research and handoff (no AI comparison)
 - [x] Add SEO meta description and keywords
 - [x] Add custom notification system (notifies owner on processing complete)
+
+## Bug Fixes
+- [x] Fix missing lead time and cost display in results section (robust multi-agent extraction + better null handling)
