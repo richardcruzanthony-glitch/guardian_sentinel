@@ -169,3 +169,4 @@
 - [x] Add Puter.js CDN to index.html for free unlimited AI
 - [x] Create Puter AI adapter for hybrid orchestrator
 - [x] Wire Puter as fallback in hybrid orchestrator when server is exhausted
+- [x] Remove 'out of tokens' / 'usage exhausted' error from UI (router handles silently)

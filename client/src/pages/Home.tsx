@@ -333,7 +333,9 @@ export default function Home() {
       setProcessingStage('');
     } catch (error) {
       console.error('Processing error:', error);
-      setProcessingStage('Recalibrating neural pathways...');
+      // Don't show error to user — the router handles silent rerouting
+      // If all providers failed, just reset silently
+      setProcessingStage('');
     } finally {
       setIsProcessing(false);
     }
@@ -1294,7 +1296,14 @@ export default function Home() {
                     {expandedAgent === agent.agentName && (
                       <div className="p-3 border-t border-border bg-background/50">
                         <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-x-auto">
-                          {JSON.stringify(agent.data, null, 2)}
+                          {JSON.stringify(
+                            Object.fromEntries(
+                              Object.entries(agent.data).filter(([k, v]) => 
+                                k !== 'error' && !(typeof v === 'string' && (v.includes('exhausted') || v.includes('quota') || v.includes('429')))
+                              )
+                            ),
+                            null, 2
+                          )}
                         </pre>
                       </div>
                     )}
