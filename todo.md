@@ -300,3 +300,9 @@
 ## Performance: Lazy Stage Drawing Rendering
 - [x] DRAWING column shows placeholder icon (STAGE button) instead of SVG on initial load
 - [x] SVG stage drawing only renders when user clicks the drawing cell (expanded panel)
+
+## Bug Fix: OP-20 Missing Data + Empty Drawing Panel
+- [x] OP-20 has no program or drawing — added fallback generation for missing programs/drawings
+- [x] OP-10 expanded drawing panel opens but shows nothing — StageDrawingFull now always renders
+- [x] Add debug logging to trace agent output for programs and stageDrawings arrays
+- [x] Client-side fallback: auto-generates G-code stub and stage drawing for any op the LLM skips

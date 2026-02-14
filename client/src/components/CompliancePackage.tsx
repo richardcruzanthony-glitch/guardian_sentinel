@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink, Code2, Layers } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,62 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
   const shippingData = agents.find((a: any) => a.agentName === 'ShippingAgent')?.data || {};
   const auditData = agents.find((a: any) => a.agentName === 'AuditAgent')?.data || {};
   const outsideProcessesData = agents.find((a: any) => a.agentName === 'OutsideProcessesAgent')?.data || {};
-  const cncData = agents.find((a: any) => a.agentName === 'CNCProgrammingAgent')?.data || {};
+  const rawCncData = agents.find((a: any) => a.agentName === 'CNCProgrammingAgent')?.data || {};
+
+  // Ensure every CNC operation has a program and every operation has a stage drawing
+  const cncData = useMemo(() => {
+    const data = { ...rawCncData };
+    const ops = Array.isArray(data.operations) ? data.operations : [];
+    
+    // Debug: log what the agent returned
+    console.log('[CompliancePackage] CNC Agent raw data:', JSON.stringify({
+      operationCount: ops.length,
+      programCount: Array.isArray(data.programs) ? data.programs.length : 0,
+      stageDrawingCount: Array.isArray(data.stageDrawings) ? data.stageDrawings.length : 0,
+      programOps: Array.isArray(data.programs) ? data.programs.map((p: any) => p.opNumber) : [],
+      stageDrawingOps: Array.isArray(data.stageDrawings) ? data.stageDrawings.map((s: any) => s.opNumber) : [],
+    }));
+
+    // Ensure programs array exists
+    if (!Array.isArray(data.programs)) data.programs = [];
+    // Ensure stageDrawings array exists  
+    if (!Array.isArray(data.stageDrawings)) data.stageDrawings = [];
+
+    // For each CNC operation that's missing a program, generate a fallback
+    ops.forEach((op: any, idx: number) => {
+      const isCNCOp = /CNC|HAAS|VF-|ST-|MILL|LATHE/i.test(op.machine || '');
+      if (isCNCOp && !data.programs.find((p: any) => p.opNumber === op.opNumber)) {
+        const progNum = `O${String(idx + 1).padStart(4, '0')}`;
+        const machineName = op.machine?.replace(/\s*MACH\d+/i, '') || 'HAAS VF-3';
+        const instructions = Array.isArray(op.instructions) ? op.instructions : [op.instructions || 'MACHINING OPERATION'];
+        data.programs.push({
+          programNumber: progNum,
+          opNumber: op.opNumber,
+          machine: machineName,
+          gcode: `${progNum} (${(result.fileName || 'PART').toUpperCase()} - ${op.opNumber} ${instructions[0]?.replace(/\(.*?\)/g, '').trim().substring(0, 40) || 'MACHINING'})\n(${machineName} / ${op.workholding || 'VISE'})\n(DATE: ${new Date().toISOString().split('T')[0]} / PROGRAMMER: GUARDIAN OS)\nG90 G54 G17\nG28 G91 Z0.\nT${String(idx + 1).padStart(2, '0')} M06 (${Array.isArray(op.tools) ? op.tools[0] || 'ENDMILL' : 'ENDMILL'})\nS8000 M03\nG43 H${String(idx + 1).padStart(2, '0')} Z1.0\n(${instructions.join('\n(')})\n(FULL TOOLPATH REQUIRES DIGITAL TWIN INTEGRATION)\nM09\nG28 G91 Z0.\nM30\n%`,
+        });
+      }
+
+      // For every operation missing a stage drawing, generate a fallback
+      if (!data.stageDrawings.find((s: any) => s.opNumber === op.opNumber)) {
+        data.stageDrawings.push({
+          opNumber: op.opNumber,
+          title: `AFTER ${op.opNumber}: ${(Array.isArray(op.instructions) ? op.instructions[0] : op.instructions || op.machine || 'OPERATION').replace(/\(.*?\)/g, '').trim().substring(0, 50).toUpperCase()}`,
+          description: `Part state after ${op.opNumber}. Machine: ${op.machine || 'N/A'}. ${Array.isArray(op.instructions) ? op.instructions.join('. ') : op.instructions || ''}`,
+          machinedFeatures: Array.isArray(op.instructions) ? op.instructions.map((inst: string) => inst.replace(/\(REF BUBBLE.*?\)/gi, '').trim()) : [op.instructions || 'Machining operation'],
+          remainingStock: 'See subsequent operations',
+          fixturing: op.workholding || 'Standard workholding',
+        });
+      }
+    });
+
+    console.log('[CompliancePackage] After fallback fill:', JSON.stringify({
+      programCount: data.programs.length,
+      stageDrawingCount: data.stageDrawings.length,
+    }));
+
+    return data;
+  }, [rawCncData, result.fileName]);
 
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const quoteNumber = `GOS-${Date.now().toString(36).toUpperCase()}`;

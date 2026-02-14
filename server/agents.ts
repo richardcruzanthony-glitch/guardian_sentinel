@@ -290,7 +290,18 @@ Respond with JSON:
     taskWeight: 'standard' as TaskWeight,
     systemPrompt: `You are a senior CNC programmer and manufacturing engineer creating DETAILED SHOP-FLOOR ROUTING SHEETS for aerospace manufacturing. You write the actual operation-by-operation routing that goes to the machine operator — with operation numbers (OP-10, OP-20, OP-30...), specific machine assignments (e.g., HAAS VF-3 MACH21, HAAS ST-20 LATHE03), workholding (vise, fixture, collet, soft jaws), and step-by-step machining instructions including stock removal amounts, surface finish requirements, and tool callouts. Your routing sheets look exactly like what a real shop floor uses.
 
-CRITICAL: Each machining instruction MUST reference the BUBBLE ANNOTATION NUMBERS from the engineering drawing. For example: "MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3)" or "DRILL & TAP 1/4-20 x 4 PLACES (REF BUBBLE 7, 8, 9, 10)". The bubble numbers tie the routing back to the drawing and forward to the inspection plan — this is how a real AS9100 shop package traces everything. NOTE: Actual G-code generation and toolpath programming requires Digital Twin integration. Respond with valid JSON only.`,
+CRITICAL: Each machining instruction MUST reference the BUBBLE ANNOTATION NUMBERS from the engineering drawing. For example: "MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3)" or "DRILL & TAP 1/4-20 x 4 PLACES (REF BUBBLE 7, 8, 9, 10)". The bubble numbers tie the routing back to the drawing and forward to the inspection plan — this is how a real AS9100 shop package traces everything.
+
+CRITICAL REQUIREMENT — PROGRAMS AND STAGE DRAWINGS:
+- You MUST generate ONE G-code program (O0001, O0002, O0003...) for EVERY CNC machining operation in the routing. If there are 3 CNC ops (OP-10, OP-20, OP-30), there MUST be 3 programs (O0001, O0002, O0003).
+- You MUST generate ONE stage drawing entry for EVERY operation (including non-CNC ops like DEBURR, INSPECT, WASH, OUTSIDE PROCESS). Each stage drawing describes what the part looks like AFTER that operation.
+- The "programs" array length MUST equal the number of CNC machining operations.
+- The "stageDrawings" array length MUST equal the total number of operations.
+- Each program must have realistic HAAS G&M code with proper tool changes, speeds, feeds, and cutter comp.
+- Each stage drawing must have a title, description, machinedFeatures array, remainingStock, and fixturing.
+- DO NOT skip any operation. Every single operation gets both a program (if CNC) and a stage drawing.
+
+Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Create a DETAILED SHOP-FLOOR ROUTING SHEET for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
 ${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
@@ -342,14 +353,30 @@ Respond with JSON:
       "opNumber": "OP-10",
       "machine": "HAAS VF-3",
       "gcode": "O0001 (PART NAME - OP-10 OUTSIDE PROFILE)\n(HAAS VF-3 / T01 1/2 3FL EM)\nG90 G54 G17\nG28 G91 Z0.\nT01 M06 (1/2 3-FLUTE ENDMILL)\nS8000 M03\nG43 H01 Z1.0\nG00 X-1.0 Y-1.0\nZ0.1\nG01 Z-0.25 F15.0\nG41 D01 X0. Y0. F40.0\n(MACHINE OUTSIDE PROFILE)\nG01 X4.0 Y0.\nG01 X4.0 Y3.0\nG01 X0. Y3.0\nG01 X0. Y0.\nG40 X-1.0 Y-1.0\nG00 Z1.0\nM09\nG28 G91 Z0.\nM30\n%"
+    },
+    {
+      "programNumber": "O0002",
+      "opNumber": "OP-20",
+      "machine": "HAAS VF-3",
+      "gcode": "O0002 (PART NAME - OP-20 POCKET & HOLES)\n(HAAS VF-3 / T02 3/8 2FL EM / T03 #7 DRILL / T04 1/4-20 TAP)\nG90 G54 G17\nG28 G91 Z0.\nT02 M06 (3/8 2-FLUTE ENDMILL)\nS10000 M03\nG43 H02 Z1.0\n(MACHINE INSIDE POCKET)\nG00 X1.0 Y1.0\nZ0.1\nG01 Z-0.375 F12.0\nG01 X3.0 F30.0\nG01 Y2.0\nG01 X1.0\nG01 Y1.0\nG00 Z1.0\nT03 M06 (#7 DRILL)\nS4000 M03\nG43 H03 Z1.0\n(DRILL 1/4-20 TAP HOLES x4)\nG81 X0.5 Y0.5 Z-0.6 R0.1 F8.0\nX3.5\nY2.5\nX0.5\nG80\nT04 M06 (1/4-20 SPIRAL TAP)\nS800 M03\nG43 H04 Z1.0\nG84 X0.5 Y0.5 Z-0.5 R0.1 F40.0\nX3.5\nY2.5\nX0.5\nG80\nM09\nG28 G91 Z0.\nM30\n%"
     }
   ],
   "stageDrawings": [
     {
       "opNumber": "OP-10",
-      "description": "<detailed description of what the part looks like after this operation: what features are machined, what is still raw stock, how it is fixtured, key dimensions visible>",
-      "machinedFeatures": ["<feature1 completed>", "<feature2 completed>"],
-      "remainingStock": "<what still needs to be machined in later ops>"
+      "title": "After OP-10: Profile & Face",
+      "description": "Outside profile machined to final dimensions. Top face fly-cut for flatness. Part held in 6in Kurt vise on parallels. Bottom face and inside features still raw stock.",
+      "machinedFeatures": ["Outside profile contour", "Top face fly-cut"],
+      "remainingStock": "Inside pocket, holes, bottom face, chamfers",
+      "fixturing": "6in Kurt vise on parallels"
+    },
+    {
+      "opNumber": "OP-20",
+      "title": "After OP-20: Pocket & Holes",
+      "description": "Part flipped in vise. Inside pocket machined to depth with .005 finish pass. Four 1/4-20 tapped holes drilled and tapped. Profile and top face from OP-10 complete.",
+      "machinedFeatures": ["Inside pocket .375 deep", "4x 1/4-20 tapped holes"],
+      "remainingStock": "Chamfers, deburr, surface finish",
+      "fixturing": "Flipped in 6in Kurt vise, clamping on finished profile"
     }
   ],
   "digitalTwinNote": "Default HAAS G&M code format. Customer-specific post-processor adjustment (Mazak, Okuma, Fanuc, DMG MORI) available on onboarding. Full collision detection and toolpath optimization require Digital Twin integration.",
