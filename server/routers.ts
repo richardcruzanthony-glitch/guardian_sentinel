@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { runAllAgents, getAgentsForDomain } from "./agents";
+import { generateImage } from "./_core/imageGeneration";
 import { saveManufacturingQuote, getManufacturingQuotes, saveLearningMetric, getLearningMetrics, saveAgentLog, getAgentLogs, saveCompliancePackage, getCompliancePackages, saveLead, getLeads } from "./db";
 import { storagePut } from "./storage";
 import { notifyOwner } from "./_core/notification";
@@ -96,6 +97,44 @@ export const appRouter = router({
         } catch (error) {
           console.error('Guardian processing error:', error);
           throw new Error(`Failed to process request: ${String(error)}`);
+        }
+      }),
+
+    /**
+     * Generate a stage drawing image for a CNC operation
+     */
+    generateStageDrawing: publicProcedure
+      .input(z.object({
+        opNumber: z.string(),
+        title: z.string(),
+        description: z.string(),
+        machinedFeatures: z.array(z.string()),
+        remainingStock: z.string(),
+        fixturing: z.string().optional(),
+        material: z.string().optional(),
+        partName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const prompt = `Technical CNC machining stage drawing, engineering blueprint style with dark background and cyan/green line art. Isometric 3D view of a machined metal part.
+
+Part: ${input.partName || 'CNC Machined Part'}
+Material: ${input.material || 'Aluminum 6061-T6'}
+Stage: ${input.title}
+
+${input.description}
+
+Machined features (shown as finished surfaces with fine crosshatch): ${input.machinedFeatures.join(', ')}
+Remaining stock (shown as rough/unmachined): ${input.remainingStock}
+${input.fixturing ? `Workholding: ${input.fixturing}` : ''}
+
+Style: Technical engineering illustration, dark navy/black background, parts shown in metallic silver/aluminum color, machined surfaces highlighted in cyan glow, dimensions and callouts shown, vise/fixture shown in gray. Clean, professional, suitable for a manufacturing routing sheet.`;
+
+          const { url } = await generateImage({ prompt });
+          return { success: true, url: url || '' };
+        } catch (error) {
+          console.error('Stage drawing generation error:', error);
+          return { success: false, url: '', error: String(error) };
         }
       }),
 

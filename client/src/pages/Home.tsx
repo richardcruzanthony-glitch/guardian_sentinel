@@ -9,7 +9,7 @@ import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualiz
 import { CompliancePackage } from "@/components/CompliancePackage";
 import { runHybridProcessing, type AgentResult, type HybridProcessingResult } from "@/lib/hybridOrchestrator";
 import { DemoRequestModal, EarlyAccessModal, ContactSection } from "@/components/LeadCapture";
-import { DigitalTwin } from "@/components/DigitalTwin";
+import { Link } from 'wouter';
 import { Rocket } from 'lucide-react';
 
 type Domain = 'manufacturing' | 'defense' | 'medical' | 'legal';
@@ -1345,10 +1345,32 @@ export default function Home() {
           </div>
         )}
 
-        {/* Digital Twin — Manufacturing Only */}
+        {/* Digital Twin Teaser — Manufacturing Only */}
         {domain === 'manufacturing' && (
-          <section>
-            <DigitalTwin />
+          <section className="py-8">
+            <Link href="/shop-floor">
+              <div className="border border-accent/30 rounded-xl p-8 bg-card/30 backdrop-blur-sm hover:bg-card/50 hover:border-accent/50 transition-all cursor-pointer group">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-lg bg-accent/20 flex items-center justify-center">
+                      <Factory className="w-7 h-7 text-accent" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground font-heading">Digital Twin — Shop Floor Manager</h3>
+                      <p className="text-sm text-muted-foreground mt-1">Real-time machine status, utilization, and work center monitoring across 25 CNC machines</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2">
+                      <span className="text-[10px] px-2 py-1 rounded bg-green-500/20 text-green-400 border border-green-500/30">16 RUNNING</span>
+                      <span className="text-[10px] px-2 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">4 SETUP</span>
+                      <span className="text-[10px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">60% UTIL</span>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-accent group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </div>
+            </Link>
           </section>
         )}
 

@@ -265,6 +265,10 @@ Generate a real shop-floor routing sheet. Each operation must include:
 - Stock removal amounts, surface finish requirements, tool callouts
 - Include DEBURR, INSPECT, WASH, and OUTSIDE PROCESS operations
 
+CRITICAL: You MUST generate:
+1. A SEPARATE HAAS G&M CODE PROGRAM for EVERY CNC machining operation (O0001 for OP-10, O0002 for OP-20, O0003 for OP-30, etc.). Each program must be complete with header comments, tool changes, speeds/feeds, cutter comp, and proper HAAS format (G90/G54/G17, G28, M30, %). Non-CNC operations (deburr, inspect, wash, outside process) do NOT get programs.
+2. A STAGE DRAWING DESCRIPTION for EVERY operation showing what the part looks like AFTER that operation completes — machined features visible, remaining raw stock, workholding setup, and key dimensions. Include a title like "AFTER OP-10: OUTSIDE PROFILE MACHINED".
+
 Example:
 OP-10: CNC HAAS VF-3 MACH21 / VISE - MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3), FLY CUT FACE REMOVE .050 (REF BUBBLE 4)
 OP-20: CNC HAAS VF-3 MACH21 / FLIP IN VISE - MACHINE INSIDE POCKET .005 FINISH PASS (REF BUBBLE 5, 6), DRILL & TAP 1/4-20 x 4 PLACES (REF BUBBLE 7, 8, 9, 10)
@@ -286,15 +290,31 @@ Respond with JSON:
       "programNumber": "O0001",
       "opNumber": "OP-10",
       "machine": "HAAS VF-3",
-      "gcode": "O0001 (PART NAME - OP-10)\nG90 G54 G17\nG28 G91 Z0.\nT01 M06\nS8000 M03\nG43 H01 Z1.0\n..."
+      "gcode": "O0001 (PART NAME - OP-10 OUTSIDE PROFILE)\n(HAAS VF-3 MACH21 / T01 1/2 3FL EM)\n(DATE: 2026-02-13 / PROGRAMMER: GUARDIAN OS)\nG90 G54 G17\nG28 G91 Z0.\nT01 M06 (1/2 3-FLUTE CARBIDE ENDMILL)\nS8000 M03\nG43 H01 Z1.0\nG00 X-1.0 Y-1.0\nZ0.1\nG01 Z-0.250 F15.0 (ROUGH PASS 1)\nG41 D01 X0. Y0. F40.0\nG01 X4.000 Y0.\nG01 X4.000 Y3.000\nG01 X0. Y3.000\nG01 X0. Y0.\nG40 X-1.0 Y-1.0\nG00 Z0.1\nG01 Z-0.500 F12.0 (ROUGH PASS 2)\nG41 D01 X0. Y0. F40.0\nG01 X4.000 Y0.\nG01 X4.000 Y3.000\nG01 X0. Y3.000\nG01 X0. Y0.\nG40 X-1.0 Y-1.0\nG00 Z1.0\nM09\nG28 G91 Z0.\nM01 (OPTIONAL STOP - INSPECT)\nM30\n%"
+    },
+    {
+      "programNumber": "O0002",
+      "opNumber": "OP-20",
+      "machine": "HAAS VF-3",
+      "gcode": "O0002 (PART NAME - OP-20 POCKET & HOLES)\n(HAAS VF-3 MACH21 / T02 3/8 2FL EM, T03 #7 DRILL, T04 1/4-20 TAP)\n(DATE: 2026-02-13 / PROGRAMMER: GUARDIAN OS)\nG90 G54 G17\nG28 G91 Z0.\nT02 M06 (3/8 2-FLUTE CARBIDE ENDMILL)\nS10000 M03\nG43 H02 Z1.0\n(POCKET ROUGH - HELICAL ENTRY)\nG00 X2.000 Y1.500\nZ0.1\nG01 Z-0.100 F8.0\nG02 X2.100 Y1.500 I0.050 J0. F30.0\n(POCKET PROFILE)\nG01 X3.000 Y0.500 F35.0\nG01 X3.000 Y2.500\nG01 X1.000 Y2.500\nG01 X1.000 Y0.500\nG01 X3.000 Y0.500\nG00 Z1.0\nM09\nT03 M06 (#7 DRILL - 0.201 DIA)\nS4000 M03\nG43 H03 Z1.0\nG00 X0.500 Y0.500\nG83 Z-0.750 R0.1 Q0.150 F12.0 (PECK DRILL)\nX3.500 Y0.500\nX3.500 Y2.500\nX0.500 Y2.500\nG80\nG00 Z1.0\nT04 M06 (1/4-20 SPIRAL FLUTE TAP)\nS800 M03\nG43 H04 Z1.0\nG84 X0.500 Y0.500 Z-0.625 R0.1 F40.0 (TAP 4X)\nX3.500 Y0.500\nX3.500 Y2.500\nX0.500 Y2.500\nG80\nG00 Z1.0\nM09\nG28 G91 Z0.\nM01\nM30\n%"
     }
   ],
   "stageDrawings": [
     {
       "opNumber": "OP-10",
-      "description": "<what the part looks like after this op: machined features, remaining stock, fixturing>",
-      "machinedFeatures": ["<completed features>"],
-      "remainingStock": "<what still needs machining>"
+      "title": "AFTER OP-10: OUTSIDE PROFILE MACHINED",
+      "description": "Part clamped in 6-inch Kurt vise on parallels. Outside profile machined to final dimensions 4.000 x 3.000 x 0.500. Top face fly-cut for cleanup. All outside edges at finish dimension. Part still has raw stock appearance on bottom face (vise side). Four corner radii visible from endmill cutter radius.",
+      "machinedFeatures": ["Outside profile 4.000 x 3.000", "Top face fly-cut to thickness", "Corner radii from 1/2 endmill"],
+      "remainingStock": "Bottom face unfinished, no pocket, no holes, no chamfers",
+      "fixturing": "6-inch Kurt vise on parallels, part sitting on 0.500 parallels, clamping on Y-axis sides"
+    },
+    {
+      "opNumber": "OP-20",
+      "title": "AFTER OP-20: POCKET & HOLES COMPLETE",
+      "description": "Part flipped in vise (machined face down on parallels). Center pocket machined 2.000 x 2.000 x 0.250 deep with square corners cleaned up. Four 1/4-20 tapped holes at corners, drilled through with #7 drill and tapped to 0.625 depth. Bottom face (now top) fly-cut for cleanup. All critical dimensions now machined.",
+      "machinedFeatures": ["Center pocket 2.000 x 2.000 x 0.250 deep", "4x 1/4-20 tapped holes through", "Bottom face fly-cut"],
+      "remainingStock": "Deburr needed on all edges, sharp edges from pocket and holes need chamfer/break",
+      "fixturing": "6-inch Kurt vise, machined face down on parallels, clamping on Y-axis sides"
     }
   ],
   "digitalTwinNote": "Default HAAS G&M code format. Customer-specific post-processor (Mazak, Okuma, Fanuc, DMG MORI) on onboarding. Full collision detection requires Digital Twin.",

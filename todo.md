@@ -267,3 +267,27 @@
 - [x] CNC Programming Agent outputs stage drawing description per operation (what's machined, what's stock, workholding)
 - [ ] Generate visual stage drawings using image generation for each operation (requires Digital Twin)
 - [x] Display stage drawing descriptions in routing sheet below each operation
+
+## Fix: Multiple G-Code Programs & Stage Drawing Images
+- [ ] CNC Programming Agent must generate a separate HAAS G-code program (O0001, O0002, O0003...) for EVERY CNC operation, not just one example
+- [ ] Update agent prompt examples to show multiple programs
+- [ ] Generate actual stage drawing images for each operation using image generation API
+- [ ] Display stage drawing images in routing sheet next to each operation
+- [ ] Each stage drawing shows: raw stock → machined features at that stage → workholding → remaining stock
+
+## Routing Sheet Table Redesign
+- [x] Add dedicated PROGRAM column to routing sheet table (clickable program number per row)
+- [x] Add dedicated DRAWING column to routing sheet table (stage drawing thumbnail per row)
+- [x] Program column: clickable O0001/O0002 that expands G-code inline
+- [x] Drawing column: thumbnail of stage drawing showing part state after that operation
+- [x] Program and Drawing expand inline below the row when clicked
+
+## Move Digital Twin to Dedicated Page
+- [x] Create /shop-floor route with ShopFloor page component
+- [x] Move DigitalTwin component from Home.tsx inline to ShopFloor page
+- [x] Add teaser card on Home page linking to /shop-floor with status badges
+- [x] Register route in App.tsx
+
+## Future: Ara Voice Integration
+- [ ] Add Ara voice assistant with speech-to-text and text-to-speech
+- [ ] Voice-driven shop floor commands and status queries

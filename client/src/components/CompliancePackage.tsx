@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink, Image, Code2, Loader2 } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -18,6 +19,12 @@ interface DocumentSection {
 export function CompliancePackage({ result, domain }: CompliancePackageProps) {
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
   const [viewingDoc, setViewingDoc] = useState<string | null>(null);
+  const [expandedProgram, setExpandedProgram] = useState<string | null>(null);
+  const [expandedDrawing, setExpandedDrawing] = useState<string | null>(null);
+  const [stageImages, setStageImages] = useState<Record<string, string>>({});
+  const [generatingImage, setGeneratingImage] = useState<string | null>(null);
+
+  const generateImageMutation = trpc.guardian.generateStageDrawing.useMutation();
 
   if (domain !== 'manufacturing') return null;
 
@@ -582,7 +589,9 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                 <th className="border border-border p-2 text-left">MACHINE / STATION</th>
                 <th className="border border-border p-2 text-left">WORKHOLDING</th>
                 <th className="border border-border p-2 text-left">INSTRUCTIONS (WITH BUBBLE REFS)</th>
-                <th className="border border-border p-2 text-left">TOOLS</th>
+                <th className="border border-border p-2 text-left w-20">TOOLS</th>
+                <th className="border border-border p-2 text-center w-20">PROGRAM</th>
+                <th className="border border-border p-2 text-center w-24">DRAWING</th>
                 <th className="border border-border p-2 text-left w-20">CYCLE TIME</th>
               </tr>
             </thead>
@@ -596,15 +605,6 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                       <tr>
                         <td className="border border-border p-2 font-bold text-green-400">
                           {op.opNumber}
-                          {program && (
-                            <button
-                              onClick={() => setExpandedDoc(expandedDoc === `prog-${i}` ? null : `prog-${i}`)}
-                              className="block mt-1 text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors cursor-pointer"
-                              title="Click to view HAAS G&M code"
-                            >
-                              {program.programNumber}
-                            </button>
-                          )}
                         </td>
                         <td className="border border-border p-2 font-semibold">{op.machine}</td>
                         <td className="border border-border p-2">{op.workholding}</td>
@@ -618,11 +618,87 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                         <td className="border border-border p-2 text-[10px]">
                           {Array.isArray(op.tools) ? op.tools.join(', ') : (op.tools || '—')}
                         </td>
+                        {/* PROGRAM COLUMN */}
+                        <td className="border border-border p-2 text-center">
+                          {program ? (
+                            <button
+                              onClick={() => setExpandedProgram(expandedProgram === `prog-${i}` ? null : `prog-${i}`)}
+                              className={`inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded font-bold cursor-pointer transition-colors ${
+                                expandedProgram === `prog-${i}`
+                                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50'
+                                  : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30'
+                              }`}
+                              title="Click to view HAAS G&M code"
+                            >
+                              <Code2 className="w-3 h-3" />
+                              {program.programNumber}
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground text-[10px]">—</span>
+                          )}
+                        </td>
+                        {/* DRAWING COLUMN */}
+                        <td className="border border-border p-2 text-center">
+                          {stageDraw ? (
+                            <div>
+                              {stageImages[op.opNumber] ? (
+                                <button
+                                  onClick={() => setExpandedDrawing(expandedDrawing === `draw-${i}` ? null : `draw-${i}`)}
+                                  className="cursor-pointer group"
+                                  title="Click to expand stage drawing"
+                                >
+                                  <img
+                                    src={stageImages[op.opNumber]}
+                                    alt={stageDraw.title || `Stage ${op.opNumber}`}
+                                    className="w-16 h-16 object-contain rounded border border-accent/30 group-hover:border-accent/60 transition-colors"
+                                  />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    setGeneratingImage(op.opNumber);
+                                    try {
+                                      const res = await generateImageMutation.mutateAsync({
+                                        opNumber: op.opNumber,
+                                        title: stageDraw.title || `After ${op.opNumber}`,
+                                        description: stageDraw.description || '',
+                                        machinedFeatures: Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures : [],
+                                        remainingStock: stageDraw.remainingStock || '',
+                                        fixturing: stageDraw.fixturing || '',
+                                        material: cncData.routingSheet?.material || result.material || 'Aluminum 6061-T6',
+                                        partName: result.fileName || 'Part',
+                                      });
+                                      if (res.success && res.url) {
+                                        setStageImages(prev => ({ ...prev, [op.opNumber]: res.url }));
+                                      }
+                                    } catch (e) {
+                                      console.error('Stage drawing generation failed:', e);
+                                    } finally {
+                                      setGeneratingImage(null);
+                                    }
+                                  }}
+                                  disabled={generatingImage === op.opNumber}
+                                  className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                                  title="Generate stage drawing for this operation"
+                                >
+                                  {generatingImage === op.opNumber ? (
+                                    <><Loader2 className="w-3 h-3 animate-spin" /> GEN...</>
+                                  ) : (
+                                    <><Image className="w-3 h-3" /> GENERATE</>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-[10px]">—</span>
+                          )}
+                        </td>
                         <td className="border border-border p-2 text-right">{op.cycleTime || '—'}</td>
                       </tr>
-                      {expandedDoc === `prog-${i}` && program && (
+                      {/* Expanded G-code panel */}
+                      {expandedProgram === `prog-${i}` && program && (
                         <tr>
-                          <td colSpan={6} className="border border-border p-0">
+                          <td colSpan={8} className="border border-border p-0">
                             <div className="bg-gray-900 p-4">
                               <div className="flex items-center justify-between mb-2">
                                 <p className="text-cyan-400 font-bold text-[11px]">{program.programNumber} — {program.machine} — HAAS G&M CODE</p>
@@ -634,20 +710,42 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                           </td>
                         </tr>
                       )}
-                      {stageDraw && (
+                      {/* Expanded stage drawing panel */}
+                      {expandedDrawing === `draw-${i}` && stageDraw && stageImages[op.opNumber] && (
                         <tr>
-                          <td colSpan={6} className="border border-border p-0">
-                            <div className="bg-muted/20 p-3 border-t border-dashed border-border">
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">STAGE DRAWING — {stageDraw.opNumber}</p>
-                              <p className="text-[11px] text-foreground/80">{stageDraw.description}</p>
-                              <div className="flex gap-4 mt-2">
-                                <div>
-                                  <p className="text-[9px] text-muted-foreground uppercase">Machined Features</p>
-                                  <p className="text-[10px]">{Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures.join(', ') : '—'}</p>
+                          <td colSpan={8} className="border border-border p-0">
+                            <div className="bg-muted/20 p-4 border-t border-dashed border-border">
+                              <div className="flex gap-6">
+                                <div className="shrink-0">
+                                  <img
+                                    src={stageImages[op.opNumber]}
+                                    alt={stageDraw.title || `Stage ${op.opNumber}`}
+                                    className="w-64 h-48 object-contain rounded border border-accent/30"
+                                  />
                                 </div>
-                                <div>
-                                  <p className="text-[9px] text-muted-foreground uppercase">Remaining Stock</p>
-                                  <p className="text-[10px]">{stageDraw.remainingStock || '—'}</p>
+                                <div className="space-y-3">
+                                  <p className="text-sm font-bold text-accent">{stageDraw.title || `AFTER ${op.opNumber}`}</p>
+                                  <p className="text-[11px] text-foreground/80">{stageDraw.description}</p>
+                                  <div className="flex gap-6">
+                                    <div>
+                                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Machined Features</p>
+                                      <ul className="mt-1 space-y-0.5">
+                                        {Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures.map((f: string, fi: number) => (
+                                          <li key={fi} className="text-[10px] text-green-400">• {f}</li>
+                                        )) : null}
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Remaining Stock</p>
+                                      <p className="text-[10px] mt-1 text-amber-400">{stageDraw.remainingStock || '—'}</p>
+                                    </div>
+                                    {stageDraw.fixturing && (
+                                      <div>
+                                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Fixturing</p>
+                                        <p className="text-[10px] mt-1">{stageDraw.fixturing}</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -659,15 +757,15 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                 })
               ) : (
                 <tr>
-                  <td className="border border-border p-2" colSpan={6}>
+                  <td className="border border-border p-2" colSpan={8}>
                     <p>Routing sheet will be generated from CNC Programming analysis</p>
                   </td>
                 </tr>
               )}
               <tr className="bg-muted/30 font-semibold">
-                <td className="border border-border p-2" colSpan={3}>TOTALS</td>
-                <td className="border border-border p-2">Operations: {cncData.totalOperations || (Array.isArray(cncData.operations) ? cncData.operations.length : '—')}</td>
+                <td className="border border-border p-2" colSpan={4}>TOTALS</td>
                 <td className="border border-border p-2">Setup: {cncData.totalEstimatedSetupTime || '—'}</td>
+                <td className="border border-border p-2" colSpan={2}>Operations: {cncData.totalOperations || (Array.isArray(cncData.operations) ? cncData.operations.length : '—')}</td>
                 <td className="border border-border p-2 text-right text-green-400">{cncData.totalEstimatedCycleTime || '—'}</td>
               </tr>
             </tbody>
