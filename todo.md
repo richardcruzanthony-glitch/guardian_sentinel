@@ -323,3 +323,11 @@
 - [x] Wire up owner notification on new lead submission (demo + early access)
 - [x] Wire up owner notification on new chat message
 - [x] Instant push notification to owner with visitor name, email, message
+
+## Pre-Loaded Showcase Parts (No Upload Required)
+- [x] Upload both sample drawings to S3 (CDN URLs)
+- [x] Hardcode pre-processed results (no LLM credits burned for demo)
+- [x] Build sample parts gallery with thumbnails and part descriptions
+- [x] Click a sample part → instantly shows full compliance package
+- [x] Keep upload feature available but secondary (dimmed when showcase selected)
+- [ ] Security messaging: "Secured instances available for ITAR/proprietary drawings"
