@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink, Code2, Layers } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StageDrawing, StageDrawingFull } from '@/components/StageDrawing';
+import { StageDrawingFull } from '@/components/StageDrawing';
 
 interface CompliancePackageProps {
   result: any;
@@ -651,6 +651,21 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                 cncData.operations.map((op: any, i: number) => {
                   const program = Array.isArray(cncData.programs) ? cncData.programs.find((p: any) => p.opNumber === op.opNumber) : null;
                   const stageDraw = Array.isArray(cncData.stageDrawings) ? cncData.stageDrawings.find((s: any) => s.opNumber === op.opNumber) : null;
+
+                  // Compute cumulative bubble refs for progressive stage drawing
+                  const currentBubbles: number[] = Array.isArray(op.bubbleRefs) ? op.bubbleRefs : [];
+                  const previousBubbles: number[] = [];
+                  for (let j = 0; j < i; j++) {
+                    const prevOp = cncData.operations[j];
+                    if (Array.isArray(prevOp?.bubbleRefs)) {
+                      previousBubbles.push(...prevOp.bubbleRefs);
+                    }
+                  }
+                  // All bubbles across all operations
+                  const allBubbles: number[] = cncData.operations.flatMap((o: any) => Array.isArray(o.bubbleRefs) ? o.bubbleRefs : []);
+                  // Engineering agent bubble annotations
+                  const bubbleAnnotations = Array.isArray(engData.bubbleAnnotations) ? engData.bubbleAnnotations : [];
+
                   return (
                     <React.Fragment key={i}>
                       <tr>
@@ -736,6 +751,11 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                                 machinedFeatures={Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures : []}
                                 remainingStock={stageDraw.remainingStock}
                                 fixturing={stageDraw.fixturing}
+                                imageUrl={result.imageUrl}
+                                bubbleAnnotations={bubbleAnnotations}
+                                currentBubbles={currentBubbles}
+                                previousBubbles={previousBubbles}
+                                allBubbles={allBubbles}
                               />
                             </div>
                           </td>

@@ -31,6 +31,7 @@ export interface AgentResult {
 
 export interface HybridProcessingResult {
   fileName: string;
+  imageUrl?: string;
   totalDuration: number;
   processingTime: number;
   sequentialEstimate: number;
@@ -215,6 +216,7 @@ export async function runHybridProcessing(
 
       return {
         fileName: input.fileName,
+        imageUrl: input.imageUrl,
         totalDuration: Date.now() - startTime,
         processingTime: result.processingTime,
         sequentialEstimate: result.sequentialEstimate,
@@ -371,6 +373,7 @@ export async function runHybridProcessing(
 
   return {
     fileName: input.fileName,
+    imageUrl: input.imageUrl,
     totalDuration: Date.now() - startTime,
     processingTime: parallelDuration,
     sequentialEstimate,
@@ -407,6 +410,7 @@ function buildGracefulFailureResult(
 
   return {
     fileName: input.fileName,
+    imageUrl: input.imageUrl,
     totalDuration: Date.now() - startTime,
     processingTime: Date.now() - startTime,
     sequentialEstimate: 0,

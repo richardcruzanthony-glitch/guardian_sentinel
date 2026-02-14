@@ -1,351 +1,38 @@
 import React, { useMemo } from 'react';
+import { Eye, CheckCircle2, Clock, Wrench } from 'lucide-react';
 
-interface StageDrawingProps {
+interface BubbleAnnotation {
+  bubble: number;
+  feature: string;
+  dimension: string;
+  tolerance: string;
+  type: string;
+  surfaceFinish?: string | null;
+  critical?: boolean;
+  notes?: string;
+}
+
+interface StageDrawingFullProps {
   opNumber: string;
   title?: string;
   description?: string;
   machinedFeatures?: string[];
   remainingStock?: string;
   fixturing?: string;
-  size?: 'thumb' | 'full';
+  imageUrl?: string;
+  bubbleAnnotations?: BubbleAnnotation[];
+  currentBubbles?: number[];      // Bubbles machined in THIS operation
+  previousBubbles?: number[];     // Bubbles machined in PREVIOUS operations
+  allBubbles?: number[];          // All bubble numbers total
 }
 
 /**
- * Client-side SVG stage drawing generator.
- * Renders a technical engineering-style visualization of the part
- * at each machining stage — no API calls needed.
- */
-export function StageDrawing({
-  opNumber,
-  title,
-  description,
-  machinedFeatures = [],
-  remainingStock,
-  fixturing,
-  size = 'thumb',
-}: StageDrawingProps) {
-  const isThumb = size === 'thumb';
-  const w = isThumb ? 80 : 320;
-  const h = isThumb ? 60 : 240;
-
-  // Determine operation index for progressive visualization
-  const opIndex = useMemo(() => {
-    const num = parseInt(opNumber.replace(/\D/g, ''), 10);
-    return isNaN(num) ? 1 : Math.floor(num / 10);
-  }, [opNumber]);
-
-  // Determine if this is a non-CNC operation
-  const isDeburr = /deburr|bench/i.test(description || '') || /deburr/i.test(opNumber);
-  const isInspect = /inspect|cmm|fai/i.test(description || '') || /inspect/i.test(opNumber);
-  const isOutside = /outside|anodize|plate|heat treat|ndt/i.test(description || '');
-  const isWash = /wash|clean/i.test(description || '');
-  const isCNC = !isDeburr && !isInspect && !isOutside && !isWash;
-
-  // Feature detection from machinedFeatures text
-  const hasProfile = machinedFeatures.some(f => /profile|outside|contour|perimeter/i.test(f));
-  const hasPocket = machinedFeatures.some(f => /pocket|cavity|recess/i.test(f));
-  const hasHoles = machinedFeatures.some(f => /hole|drill|tap|bore/i.test(f));
-  const hasFace = machinedFeatures.some(f => /face|fly.?cut|surface|top|bottom/i.test(f));
-  const hasChamfer = machinedFeatures.some(f => /chamfer|bevel|break.*edge/i.test(f));
-  const hasSlot = machinedFeatures.some(f => /slot|groove|channel/i.test(f));
-  const hasRadius = machinedFeatures.some(f => /radius|fillet|corner/i.test(f));
-
-  // Colors
-  const bgColor = '#0a0e17';
-  const stockColor = '#1a2332';
-  const stockStroke = '#2a3a4a';
-  const machinedFill = '#0d2a3a';
-  const machinedStroke = '#00d9ff';
-  const featureHighlight = '#00ff41';
-  const dimColor = '#4a6a7a';
-  const viseColor = '#1a1a2a';
-  const viseStroke = '#3a3a5a';
-
-  // Part dimensions relative to SVG
-  const partX = w * 0.2;
-  const partY = h * 0.15;
-  const partW = w * 0.6;
-  const partH = h * 0.5;
-
-  return (
-    <svg
-      width={w}
-      height={h}
-      viewBox={`0 0 ${w} ${h}`}
-      className="rounded border border-accent/20"
-      style={{ background: bgColor }}
-    >
-      {/* Grid pattern */}
-      <defs>
-        <pattern id={`grid-${opNumber}`} width={w * 0.05} height={h * 0.05} patternUnits="userSpaceOnUse">
-          <path d={`M ${w * 0.05} 0 L 0 0 0 ${h * 0.05}`} fill="none" stroke="#0d1520" strokeWidth="0.5" />
-        </pattern>
-      </defs>
-      <rect width={w} height={h} fill={`url(#grid-${opNumber})`} />
-
-      {isCNC && (
-        <>
-          {/* Vise / fixture at bottom */}
-          <rect
-            x={partX - w * 0.03}
-            y={partY + partH}
-            width={partW + w * 0.06}
-            height={h * 0.2}
-            fill={viseColor}
-            stroke={viseStroke}
-            strokeWidth={isThumb ? 0.5 : 1}
-            rx={isThumb ? 1 : 2}
-          />
-          {/* Vise jaw left */}
-          <rect
-            x={partX - w * 0.02}
-            y={partY + partH * 0.5}
-            width={w * 0.04}
-            height={partH * 0.5 + h * 0.2}
-            fill={viseColor}
-            stroke={viseStroke}
-            strokeWidth={isThumb ? 0.5 : 1}
-          />
-          {/* Vise jaw right */}
-          <rect
-            x={partX + partW - w * 0.02}
-            y={partY + partH * 0.5}
-            width={w * 0.04}
-            height={partH * 0.5 + h * 0.2}
-            fill={viseColor}
-            stroke={viseStroke}
-            strokeWidth={isThumb ? 0.5 : 1}
-          />
-
-          {/* Raw stock block */}
-          <rect
-            x={partX}
-            y={partY}
-            width={partW}
-            height={partH}
-            fill={stockColor}
-            stroke={stockStroke}
-            strokeWidth={isThumb ? 0.5 : 1}
-          />
-          {/* Crosshatch on raw stock */}
-          {!isThumb && (
-            <g opacity={0.15}>
-              {Array.from({ length: 12 }).map((_, i) => (
-                <line
-                  key={`hatch-${i}`}
-                  x1={partX + (i * partW) / 12}
-                  y1={partY}
-                  x2={partX + (i * partW) / 12 + partW / 6}
-                  y2={partY + partH}
-                  stroke={dimColor}
-                  strokeWidth={0.5}
-                />
-              ))}
-            </g>
-          )}
-
-          {/* Machined profile */}
-          {(hasProfile || opIndex >= 1) && (
-            <rect
-              x={partX + partW * 0.05}
-              y={partY + partH * 0.05}
-              width={partW * 0.9}
-              height={partH * 0.9}
-              fill={machinedFill}
-              stroke={machinedStroke}
-              strokeWidth={isThumb ? 0.5 : 1}
-              strokeDasharray={isThumb ? undefined : '4 2'}
-            />
-          )}
-
-          {/* Face machined (top surface highlight) */}
-          {(hasFace || opIndex >= 1) && (
-            <line
-              x1={partX + partW * 0.05}
-              y1={partY + partH * 0.05}
-              x2={partX + partW * 0.95}
-              y2={partY + partH * 0.05}
-              stroke={featureHighlight}
-              strokeWidth={isThumb ? 1 : 2}
-              opacity={0.8}
-            />
-          )}
-
-          {/* Pocket */}
-          {(hasPocket || opIndex >= 2) && (
-            <>
-              <rect
-                x={partX + partW * 0.25}
-                y={partY + partH * 0.25}
-                width={partW * 0.5}
-                height={partH * 0.5}
-                fill={bgColor}
-                stroke={featureHighlight}
-                strokeWidth={isThumb ? 0.5 : 1.5}
-              />
-              {/* Pocket depth lines */}
-              {!isThumb && (
-                <>
-                  <line
-                    x1={partX + partW * 0.27}
-                    y1={partY + partH * 0.27}
-                    x2={partX + partW * 0.73}
-                    y2={partY + partH * 0.27}
-                    stroke={featureHighlight}
-                    strokeWidth={0.5}
-                    opacity={0.4}
-                  />
-                  <line
-                    x1={partX + partW * 0.27}
-                    y1={partY + partH * 0.73}
-                    x2={partX + partW * 0.73}
-                    y2={partY + partH * 0.73}
-                    stroke={featureHighlight}
-                    strokeWidth={0.5}
-                    opacity={0.4}
-                  />
-                </>
-              )}
-            </>
-          )}
-
-          {/* Holes */}
-          {(hasHoles || opIndex >= 2) && (
-            <>
-              {[
-                [partX + partW * 0.15, partY + partH * 0.15],
-                [partX + partW * 0.85, partY + partH * 0.15],
-                [partX + partW * 0.85, partY + partH * 0.85],
-                [partX + partW * 0.15, partY + partH * 0.85],
-              ].map(([cx, cy], hi) => (
-                <React.Fragment key={`hole-${hi}`}>
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={isThumb ? 2 : 6}
-                    fill={bgColor}
-                    stroke={featureHighlight}
-                    strokeWidth={isThumb ? 0.5 : 1}
-                  />
-                  {!isThumb && (
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={3}
-                      fill="none"
-                      stroke={featureHighlight}
-                      strokeWidth={0.5}
-                      opacity={0.5}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </>
-          )}
-
-          {/* Slot */}
-          {hasSlot && (
-            <rect
-              x={partX + partW * 0.1}
-              y={partY + partH * 0.45}
-              width={partW * 0.8}
-              height={partH * 0.1}
-              fill={bgColor}
-              stroke={featureHighlight}
-              strokeWidth={isThumb ? 0.5 : 1}
-              rx={isThumb ? 1 : 3}
-            />
-          )}
-
-          {/* Chamfers */}
-          {(hasChamfer || opIndex >= 3) && (
-            <>
-              <line x1={partX + partW * 0.05} y1={partY + partH * 0.05} x2={partX + partW * 0.1} y2={partY + partH * 0.1} stroke={machinedStroke} strokeWidth={isThumb ? 0.5 : 1} />
-              <line x1={partX + partW * 0.95} y1={partY + partH * 0.05} x2={partX + partW * 0.9} y2={partY + partH * 0.1} stroke={machinedStroke} strokeWidth={isThumb ? 0.5 : 1} />
-              <line x1={partX + partW * 0.95} y1={partY + partH * 0.95} x2={partX + partW * 0.9} y2={partY + partH * 0.9} stroke={machinedStroke} strokeWidth={isThumb ? 0.5 : 1} />
-              <line x1={partX + partW * 0.05} y1={partY + partH * 0.95} x2={partX + partW * 0.1} y2={partY + partH * 0.9} stroke={machinedStroke} strokeWidth={isThumb ? 0.5 : 1} />
-            </>
-          )}
-
-          {/* Dimension lines (full size only) */}
-          {!isThumb && (
-            <>
-              {/* Width dimension */}
-              <line x1={partX} y1={h * 0.9} x2={partX + partW} y2={h * 0.9} stroke={dimColor} strokeWidth={0.5} />
-              <line x1={partX} y1={h * 0.88} x2={partX} y2={h * 0.92} stroke={dimColor} strokeWidth={0.5} />
-              <line x1={partX + partW} y1={h * 0.88} x2={partX + partW} y2={h * 0.92} stroke={dimColor} strokeWidth={0.5} />
-              {/* Height dimension */}
-              <line x1={w * 0.92} y1={partY} x2={w * 0.92} y2={partY + partH} stroke={dimColor} strokeWidth={0.5} />
-              <line x1={w * 0.9} y1={partY} x2={w * 0.94} y2={partY} stroke={dimColor} strokeWidth={0.5} />
-              <line x1={w * 0.9} y1={partY + partH} x2={w * 0.94} y2={partY + partH} stroke={dimColor} strokeWidth={0.5} />
-            </>
-          )}
-        </>
-      )}
-
-      {/* Non-CNC operations */}
-      {isDeburr && (
-        <>
-          <rect x={partX} y={partY} width={partW} height={partH} fill={machinedFill} stroke={machinedStroke} strokeWidth={isThumb ? 0.5 : 1} rx={isThumb ? 1 : 3} />
-          {/* Deburr marks around edges */}
-          {!isThumb && Array.from({ length: 8 }).map((_, i) => (
-            <circle
-              key={`deburr-${i}`}
-              cx={partX + (i + 1) * partW / 9}
-              cy={partY + partH * 0.02}
-              r={2}
-              fill={featureHighlight}
-              opacity={0.6}
-            />
-          ))}
-          <text x={w / 2} y={partY + partH + h * 0.15} textAnchor="middle" fill={featureHighlight} fontSize={isThumb ? 5 : 10} fontFamily="monospace">DEBURR</text>
-        </>
-      )}
-
-      {isInspect && (
-        <>
-          <rect x={partX} y={partY} width={partW} height={partH} fill={machinedFill} stroke={machinedStroke} strokeWidth={isThumb ? 0.5 : 1} rx={isThumb ? 1 : 3} />
-          {/* CMM probe indicator */}
-          <line x1={w / 2} y1={partY - h * 0.05} x2={w / 2} y2={partY + partH * 0.3} stroke="#ff6b35" strokeWidth={isThumb ? 1 : 2} />
-          <circle cx={w / 2} cy={partY + partH * 0.3} r={isThumb ? 2 : 4} fill="#ff6b35" />
-          <text x={w / 2} y={partY + partH + h * 0.15} textAnchor="middle" fill="#ff6b35" fontSize={isThumb ? 5 : 10} fontFamily="monospace">CMM INSPECT</text>
-        </>
-      )}
-
-      {isOutside && (
-        <>
-          <rect x={partX} y={partY} width={partW} height={partH} fill="#1a2a1a" stroke={featureHighlight} strokeWidth={isThumb ? 0.5 : 1} rx={isThumb ? 1 : 3} />
-          {/* Surface treatment gradient */}
-          <rect x={partX + 2} y={partY + 2} width={partW - 4} height={partH - 4} fill="none" stroke={featureHighlight} strokeWidth={isThumb ? 0.3 : 0.5} strokeDasharray="2 2" opacity={0.5} rx={isThumb ? 0 : 2} />
-          <text x={w / 2} y={partY + partH + h * 0.15} textAnchor="middle" fill={featureHighlight} fontSize={isThumb ? 5 : 10} fontFamily="monospace">OUTSIDE PROC</text>
-        </>
-      )}
-
-      {isWash && (
-        <>
-          <rect x={partX} y={partY} width={partW} height={partH} fill={machinedFill} stroke="#4488ff" strokeWidth={isThumb ? 0.5 : 1} rx={isThumb ? 1 : 3} />
-          <text x={w / 2} y={partY + partH + h * 0.15} textAnchor="middle" fill="#4488ff" fontSize={isThumb ? 5 : 10} fontFamily="monospace">WASH</text>
-        </>
-      )}
-
-      {/* OP label */}
-      <text
-        x={isThumb ? w * 0.5 : w * 0.05}
-        y={isThumb ? h * 0.95 : h * 0.08}
-        textAnchor={isThumb ? 'middle' : 'start'}
-        fill={machinedStroke}
-        fontSize={isThumb ? 6 : 11}
-        fontFamily="monospace"
-        fontWeight="bold"
-      >
-        {opNumber}
-      </text>
-    </svg>
-  );
-}
-
-/**
- * Full-size stage drawing with annotations
+ * Stage Drawing — shows the ACTUAL uploaded engineering drawing
+ * with progressive bubble annotation overlays.
+ * 
+ * Green  = features machined in THIS operation
+ * Cyan   = features already machined in previous operations
+ * Dim    = features not yet machined (upcoming operations)
  */
 export function StageDrawingFull({
   opNumber,
@@ -354,44 +41,209 @@ export function StageDrawingFull({
   machinedFeatures = [],
   remainingStock,
   fixturing,
-}: StageDrawingProps) {
+  imageUrl,
+  bubbleAnnotations = [],
+  currentBubbles = [],
+  previousBubbles = [],
+  allBubbles = [],
+}: StageDrawingFullProps) {
+  // Categorize each bubble annotation
+  const categorized = useMemo(() => {
+    const current: BubbleAnnotation[] = [];
+    const previous: BubbleAnnotation[] = [];
+    const upcoming: BubbleAnnotation[] = [];
+    const unassigned: BubbleAnnotation[] = [];
+
+    for (const ann of bubbleAnnotations) {
+      if (currentBubbles.includes(ann.bubble)) {
+        current.push(ann);
+      } else if (previousBubbles.includes(ann.bubble)) {
+        previous.push(ann);
+      } else if (allBubbles.includes(ann.bubble)) {
+        upcoming.push(ann);
+      } else {
+        unassigned.push(ann);
+      }
+    }
+    return { current, previous, upcoming, unassigned };
+  }, [bubbleAnnotations, currentBubbles, previousBubbles, allBubbles]);
+
+  const hasImage = imageUrl && imageUrl.length > 0;
+  const hasBubbles = bubbleAnnotations.length > 0;
+
   return (
-    <div className="flex gap-6">
-      <div className="shrink-0">
-        <StageDrawing
-          opNumber={opNumber}
-          title={title}
-          description={description}
-          machinedFeatures={machinedFeatures}
-          remainingStock={remainingStock}
-          fixturing={fixturing}
-          size="full"
-        />
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="px-3 py-1.5 bg-green-500/20 border border-green-500/40 rounded text-green-400 font-bold text-xs tracking-wider">
+          {opNumber}
+        </div>
+        <p className="text-sm font-bold text-foreground">{title || `AFTER ${opNumber}`}</p>
       </div>
-      <div className="space-y-3 text-xs font-mono">
-        <p className="text-sm font-bold text-accent">{title || `AFTER ${opNumber}`}</p>
-        <p className="text-[11px] text-foreground/80">{description}</p>
-        <div className="flex gap-6">
-          <div>
-            <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Machined Features</p>
-            <ul className="mt-1 space-y-0.5">
-              {machinedFeatures.map((f, i) => (
-                <li key={i} className="text-[10px] text-green-400">• {f}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Remaining Stock</p>
-            <p className="text-[10px] mt-1 text-amber-400">{remainingStock || '—'}</p>
-          </div>
-          {fixturing && (
+
+      <div className="flex gap-6">
+        {/* LEFT: Actual Drawing with overlay legend */}
+        <div className="shrink-0 space-y-2">
+          {hasImage ? (
+            <div className="relative border border-border rounded overflow-hidden bg-white" style={{ width: 360, maxHeight: 280 }}>
+              <img
+                src={imageUrl}
+                alt={`Engineering drawing - ${opNumber}`}
+                className="w-full h-full object-contain"
+                style={{ maxHeight: 280 }}
+              />
+              {/* Operation label overlay */}
+              <div className="absolute top-2 left-2 px-2 py-1 bg-black/80 rounded text-[10px] font-bold text-green-400 border border-green-500/50">
+                {opNumber} — STAGE VIEW
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center border border-dashed border-border rounded bg-muted/10" style={{ width: 360, height: 200 }}>
+              <div className="text-center text-muted-foreground">
+                <Eye className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <p className="text-xs">Drawing image not available</p>
+                <p className="text-[10px] mt-1">Upload an engineering drawing to see stage views</p>
+              </div>
+            </div>
+          )}
+
+          {/* Bubble legend bar */}
+          {hasBubbles && (
+            <div className="flex items-center gap-4 text-[9px] font-mono px-1">
+              {categorized.current.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
+                  <span className="text-green-400">THIS OP ({categorized.current.length})</span>
+                </span>
+              )}
+              {categorized.previous.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 inline-block" />
+                  <span className="text-cyan-400">DONE ({categorized.previous.length})</span>
+                </span>
+              )}
+              {categorized.upcoming.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-600 inline-block" />
+                  <span className="text-zinc-500">REMAINING ({categorized.upcoming.length})</span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: Bubble annotation breakdown + operation details */}
+        <div className="flex-1 space-y-3 min-w-0">
+          {/* Description */}
+          <p className="text-[11px] text-foreground/80 leading-relaxed">{description}</p>
+
+          {/* MACHINING THIS OPERATION — green */}
+          {categorized.current.length > 0 && (
             <div>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Fixturing</p>
-              <p className="text-[10px] mt-1">{fixturing}</p>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Wrench className="w-3 h-3 text-green-400" />
+                <p className="text-[9px] text-green-400 uppercase tracking-wider font-bold">Machining This Operation</p>
+              </div>
+              <div className="grid gap-1">
+                {categorized.current.map((ann) => (
+                  <div key={ann.bubble} className="flex items-start gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-green-500 text-black text-[9px] font-bold flex items-center justify-center mt-0.5">
+                      {ann.bubble}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold text-green-300">{ann.feature}</p>
+                      <p className="text-[9px] text-green-400/70">
+                        {ann.dimension}{ann.tolerance ? ` ${ann.tolerance}` : ''}{ann.surfaceFinish ? ` / ${ann.surfaceFinish}` : ''}
+                        {ann.critical && <span className="ml-1 text-red-400 font-bold">★ CRITICAL</span>}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PREVIOUSLY MACHINED — cyan */}
+          {categorized.previous.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+                <p className="text-[9px] text-cyan-400 uppercase tracking-wider font-bold">Previously Machined</p>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {categorized.previous.map((ann) => (
+                  <div key={ann.bubble} className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                    <span className="shrink-0 w-4 h-4 rounded-full bg-cyan-500 text-black text-[8px] font-bold flex items-center justify-center">
+                      {ann.bubble}
+                    </span>
+                    <span className="text-[9px] text-cyan-300">{ann.feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* REMAINING — dim */}
+          {categorized.upcoming.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Clock className="w-3 h-3 text-zinc-500" />
+                <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-bold">Remaining Operations</p>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {categorized.upcoming.map((ann) => (
+                  <div key={ann.bubble} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/30">
+                    <span className="shrink-0 w-4 h-4 rounded-full bg-zinc-700 text-zinc-400 text-[8px] font-bold flex items-center justify-center">
+                      {ann.bubble}
+                    </span>
+                    <span className="text-[9px] text-zinc-500">{ann.feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fixturing & remaining stock details */}
+          <div className="flex gap-4 pt-1 border-t border-border/30">
+            {fixturing && (
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Workholding</p>
+                <p className="text-[10px] mt-0.5 text-foreground/70">{fixturing}</p>
+              </div>
+            )}
+            {remainingStock && (
+              <div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Remaining Stock</p>
+                <p className="text-[10px] mt-0.5 text-amber-400/80">{remainingStock}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Machined features list (from agent) */}
+          {machinedFeatures.length > 0 && !hasBubbles && (
+            <div>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Machined Features</p>
+              <ul className="mt-1 space-y-0.5">
+                {machinedFeatures.map((f, i) => (
+                  <li key={i} className="text-[10px] text-green-400">• {f}</li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Thumbnail version for the DRAWING column — just shows a small icon.
+ * Kept for backward compatibility but no longer used for full rendering.
+ */
+export function StageDrawing({ opNumber }: { opNumber: string }) {
+  return (
+    <div className="w-16 h-12 rounded border border-accent/20 bg-muted/10 flex items-center justify-center">
+      <span className="text-[8px] font-mono text-accent/60">{opNumber}</span>
     </div>
   );
 }

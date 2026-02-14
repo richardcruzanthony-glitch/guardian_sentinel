@@ -306,3 +306,11 @@
 - [x] OP-10 expanded drawing panel opens but shows nothing — StageDrawingFull now always renders
 - [x] Add debug logging to trace agent output for programs and stageDrawings arrays
 - [x] Client-side fallback: auto-generates G-code stub and stage drawing for any op the LLM skips
+
+## Fix: Stage Drawings Must Represent Actual Uploaded Part
+- [x] Show actual uploaded drawing image as the stage drawing base
+- [x] Overlay bubble annotation highlights showing which features are machined at each operation
+- [x] Progressive color coding: green = machined this op, cyan = previously machined, dim = remaining
+- [x] Pass imageUrl through HybridProcessingResult to CompliancePackage
+- [x] Compute cumulative bubbleRefs per operation for progressive tracking
+- [x] Cross-reference Engineering Agent bubbleAnnotations with CNC Agent bubbleRefs stock
