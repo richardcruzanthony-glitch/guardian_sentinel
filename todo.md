@@ -291,3 +291,8 @@
 ## Future: Ara Voice Integration
 - [ ] Add Ara voice assistant with speech-to-text and text-to-speech
 - [ ] Voice-driven shop floor commands and status queries
+
+## Bug Fixes: Routing Sheet Program & Drawing
+- [x] Fix GENERATE button not producing stage drawing images — replaced with client-side SVG drawings (no API needed)
+- [x] Fix OP-20+ missing program and drawing — agent prompt updated to require one per CNC op
+- [x] Ensure every CNC operation gets its own program and stage drawing in the output

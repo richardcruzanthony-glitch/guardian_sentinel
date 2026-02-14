@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink, Image, Code2, Loader2 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import React, { useState } from 'react';
+import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink, Code2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { StageDrawing, StageDrawingFull } from '@/components/StageDrawing';
 
 interface CompliancePackageProps {
   result: any;
@@ -21,10 +21,6 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
   const [viewingDoc, setViewingDoc] = useState<string | null>(null);
   const [expandedProgram, setExpandedProgram] = useState<string | null>(null);
   const [expandedDrawing, setExpandedDrawing] = useState<string | null>(null);
-  const [stageImages, setStageImages] = useState<Record<string, string>>({});
-  const [generatingImage, setGeneratingImage] = useState<string | null>(null);
-
-  const generateImageMutation = trpc.guardian.generateStageDrawing.useMutation();
 
   if (domain !== 'manufacturing') return null;
 
@@ -640,55 +636,23 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                         {/* DRAWING COLUMN */}
                         <td className="border border-border p-2 text-center">
                           {stageDraw ? (
-                            <div>
-                              {stageImages[op.opNumber] ? (
-                                <button
-                                  onClick={() => setExpandedDrawing(expandedDrawing === `draw-${i}` ? null : `draw-${i}`)}
-                                  className="cursor-pointer group"
-                                  title="Click to expand stage drawing"
-                                >
-                                  <img
-                                    src={stageImages[op.opNumber]}
-                                    alt={stageDraw.title || `Stage ${op.opNumber}`}
-                                    className="w-16 h-16 object-contain rounded border border-accent/30 group-hover:border-accent/60 transition-colors"
-                                  />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={async () => {
-                                    setGeneratingImage(op.opNumber);
-                                    try {
-                                      const res = await generateImageMutation.mutateAsync({
-                                        opNumber: op.opNumber,
-                                        title: stageDraw.title || `After ${op.opNumber}`,
-                                        description: stageDraw.description || '',
-                                        machinedFeatures: Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures : [],
-                                        remainingStock: stageDraw.remainingStock || '',
-                                        fixturing: stageDraw.fixturing || '',
-                                        material: cncData.routingSheet?.material || result.material || 'Aluminum 6061-T6',
-                                        partName: result.fileName || 'Part',
-                                      });
-                                      if (res.success && res.url) {
-                                        setStageImages(prev => ({ ...prev, [op.opNumber]: res.url }));
-                                      }
-                                    } catch (e) {
-                                      console.error('Stage drawing generation failed:', e);
-                                    } finally {
-                                      setGeneratingImage(null);
-                                    }
-                                  }}
-                                  disabled={generatingImage === op.opNumber}
-                                  className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors cursor-pointer disabled:opacity-50"
-                                  title="Generate stage drawing for this operation"
-                                >
-                                  {generatingImage === op.opNumber ? (
-                                    <><Loader2 className="w-3 h-3 animate-spin" /> GEN...</>
-                                  ) : (
-                                    <><Image className="w-3 h-3" /> GENERATE</>
-                                  )}
-                                </button>
-                              )}
-                            </div>
+                            <button
+                              onClick={() => setExpandedDrawing(expandedDrawing === `draw-${i}` ? null : `draw-${i}`)}
+                              className={`cursor-pointer inline-block ${
+                                expandedDrawing === `draw-${i}` ? 'ring-1 ring-accent rounded' : ''
+                              }`}
+                              title="Click to expand stage drawing"
+                            >
+                              <StageDrawing
+                                opNumber={op.opNumber}
+                                title={stageDraw.title}
+                                description={stageDraw.description}
+                                machinedFeatures={Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures : []}
+                                remainingStock={stageDraw.remainingStock}
+                                fixturing={stageDraw.fixturing}
+                                size="thumb"
+                              />
+                            </button>
                           ) : (
                             <span className="text-muted-foreground text-[10px]">—</span>
                           )}
@@ -711,43 +675,18 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                         </tr>
                       )}
                       {/* Expanded stage drawing panel */}
-                      {expandedDrawing === `draw-${i}` && stageDraw && stageImages[op.opNumber] && (
+                      {expandedDrawing === `draw-${i}` && stageDraw && (
                         <tr>
                           <td colSpan={8} className="border border-border p-0">
                             <div className="bg-muted/20 p-4 border-t border-dashed border-border">
-                              <div className="flex gap-6">
-                                <div className="shrink-0">
-                                  <img
-                                    src={stageImages[op.opNumber]}
-                                    alt={stageDraw.title || `Stage ${op.opNumber}`}
-                                    className="w-64 h-48 object-contain rounded border border-accent/30"
-                                  />
-                                </div>
-                                <div className="space-y-3">
-                                  <p className="text-sm font-bold text-accent">{stageDraw.title || `AFTER ${op.opNumber}`}</p>
-                                  <p className="text-[11px] text-foreground/80">{stageDraw.description}</p>
-                                  <div className="flex gap-6">
-                                    <div>
-                                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Machined Features</p>
-                                      <ul className="mt-1 space-y-0.5">
-                                        {Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures.map((f: string, fi: number) => (
-                                          <li key={fi} className="text-[10px] text-green-400">• {f}</li>
-                                        )) : null}
-                                      </ul>
-                                    </div>
-                                    <div>
-                                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Remaining Stock</p>
-                                      <p className="text-[10px] mt-1 text-amber-400">{stageDraw.remainingStock || '—'}</p>
-                                    </div>
-                                    {stageDraw.fixturing && (
-                                      <div>
-                                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Fixturing</p>
-                                        <p className="text-[10px] mt-1">{stageDraw.fixturing}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+                              <StageDrawingFull
+                                opNumber={op.opNumber}
+                                title={stageDraw.title}
+                                description={stageDraw.description}
+                                machinedFeatures={Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures : []}
+                                remainingStock={stageDraw.remainingStock}
+                                fixturing={stageDraw.fixturing}
+                              />
                             </div>
                           </td>
                         </tr>
