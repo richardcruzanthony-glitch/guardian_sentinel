@@ -89,7 +89,7 @@ describe("Medical Dispatch Domain Agents", () => {
   });
 
   it("all domains should have correct agent counts", () => {
-    expect(getAgentsForDomain("manufacturing")).toHaveLength(11);
+    expect(getAgentsForDomain("manufacturing")).toHaveLength(12);
     expect(getAgentsForDomain("defense")).toHaveLength(10);
     expect(getAgentsForDomain("medical")).toHaveLength(10);
   });

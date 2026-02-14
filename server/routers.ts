@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { runAllAgents, getAgentsForDomain } from "./agents";
-import { saveManufacturingQuote, getManufacturingQuotes, saveLearningMetric, getLearningMetrics, saveAgentLog, getAgentLogs, saveCompliancePackage, getCompliancePackages } from "./db";
+import { saveManufacturingQuote, getManufacturingQuotes, saveLearningMetric, getLearningMetrics, saveAgentLog, getAgentLogs, saveCompliancePackage, getCompliancePackages, saveLead, getLeads } from "./db";
 import { storagePut } from "./storage";
 import { notifyOwner } from "./_core/notification";
 
@@ -163,6 +163,83 @@ export const appRouter = router({
         } catch (error) {
           console.error('Guardian processing error:', error);
           throw new Error(`Failed to process request: ${String(error)}`);
+        }
+      }),
+  }),
+
+  // Lead Capture — Demo Requests & Early Access
+  leads: router({
+    submitDemo: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        company: z.string().optional(),
+        message: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          await saveLead({
+            type: 'demo',
+            name: input.name,
+            email: input.email,
+            company: input.company || null,
+            message: input.message || null,
+          });
+
+          // Notify owner immediately
+          try {
+            await notifyOwner({
+              title: '\u{1F3AF} New Demo Request — Guardian OS',
+              content: `Name: ${input.name}\nEmail: ${input.email}\nCompany: ${input.company || 'Not provided'}\nMessage: ${input.message || 'None'}`,
+            });
+          } catch (e) {
+            console.warn('Lead notification failed:', e);
+          }
+
+          return { success: true };
+        } catch (error) {
+          console.error('Demo request error:', error);
+          throw new Error('Failed to submit demo request');
+        }
+      }),
+
+    submitEarlyAccess: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        company: z.string().optional(),
+        companySize: z.string().optional(),
+        domainsInterested: z.array(z.string()).optional(),
+        timeline: z.string().optional(),
+        message: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          await saveLead({
+            type: 'early_access',
+            name: input.name,
+            email: input.email,
+            company: input.company || null,
+            companySize: input.companySize || null,
+            domainsInterested: input.domainsInterested || null,
+            timeline: input.timeline || null,
+            message: input.message || null,
+          });
+
+          // Notify owner immediately
+          try {
+            await notifyOwner({
+              title: '\u{1F680} New Early Access Signup — Guardian OS',
+              content: `Name: ${input.name}\nEmail: ${input.email}\nCompany: ${input.company || 'Not provided'}\nSize: ${input.companySize || 'Not provided'}\nDomains: ${(input.domainsInterested || []).join(', ') || 'Not specified'}\nTimeline: ${input.timeline || 'Not specified'}\nMessage: ${input.message || 'None'}`,
+            });
+          } catch (e) {
+            console.warn('Lead notification failed:', e);
+          }
+
+          return { success: true };
+        } catch (error) {
+          console.error('Early access error:', error);
+          throw new Error('Failed to submit early access request');
         }
       }),
   }),

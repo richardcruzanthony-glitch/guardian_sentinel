@@ -90,3 +90,23 @@ export const compliancePackages = mysqlTable("compliance_packages", {
 
 export type CompliancePackage = typeof compliancePackages.$inferSelect;
 export type InsertCompliancePackage = typeof compliancePackages.$inferInsert;
+
+/**
+ * Leads — demo requests and early access signups
+ */
+export const leads = mysqlTable("leads", {
+  id: int("id").autoincrement().primaryKey(),
+  type: mysqlEnum("type", ["demo", "early_access"]).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  company: varchar("company", { length: 255 }),
+  companySize: varchar("companySize", { length: 50 }),
+  domainsInterested: json("domainsInterested"),
+  timeline: varchar("timeline", { length: 50 }),
+  message: text("message"),
+  status: mysqlEnum("status", ["new", "contacted", "qualified", "closed"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = typeof leads.$inferInsert;

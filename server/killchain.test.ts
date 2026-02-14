@@ -70,9 +70,9 @@ describe("Kill Chain Domain Agents", () => {
     }
   });
 
-  it("manufacturing domain should still return 11 agents", () => {
+  it("manufacturing domain should still return 12 agents", () => {
     const agents = getAgentsForDomain("manufacturing");
-    expect(agents).toHaveLength(11);
+    expect(agents).toHaveLength(12);
   });
 
   it("defense and manufacturing domains should have different agents", () => {

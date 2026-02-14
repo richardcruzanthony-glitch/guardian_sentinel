@@ -8,8 +8,17 @@ import { trpc } from "@/lib/trpc";
 import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualization";
 import { CompliancePackage } from "@/components/CompliancePackage";
 import { runHybridProcessing, type AgentResult, type HybridProcessingResult } from "@/lib/hybridOrchestrator";
+import { DemoRequestModal, EarlyAccessModal, ContactSection } from "@/components/LeadCapture";
+import { Rocket } from 'lucide-react';
 
 type Domain = 'manufacturing' | 'defense' | 'medical' | 'legal';
+
+const DOMAIN_BACKGROUNDS: Record<Domain, string> = {
+  manufacturing: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663291553249/pEmGnUvsJoiMQbHO.jpg',
+  defense: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663291553249/gyeELqKFbUIuYyVe.jpg',
+  medical: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663291553249/jmbrpdUxtDdNZQBj.jpg',
+  legal: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663291553249/ywVkoyznIqCSpWdz.jpg',
+};
 
 const DOMAIN_CONFIG = {
   manufacturing: {
@@ -23,18 +32,18 @@ const DOMAIN_CONFIG = {
     acceptTypes: 'image/*,.stp,.step,.iges,.igs,.dwg,.pdf',
     processLabel: 'Ara — Coordinate All Departments',
     traditionalSteps: [
-      { dept: 'RFQ Received', time: '1-2 days' },
-      { dept: 'Engineering Review', time: '2-3 days' },
-      { dept: 'Quality Planning', time: '1-2 days' },
-      { dept: 'Production Planning', time: '1-2 days' },
-      { dept: 'Procurement', time: '2-5 days' },
-      { dept: 'Manufacturing Routing', time: '1-2 days' },
-      { dept: 'Cost Estimation', time: '1-2 days' },
-      { dept: 'Compliance Review', time: '1-3 days' },
-      { dept: 'Quote Approval', time: '1-2 days' },
+      { dept: 'RFQ Received & Logged', time: '1-2 days' },
+      { dept: 'Engineering Review & DFM', time: '2-3 days' },
+      { dept: 'Quality Planning (FAI/PPAP)', time: '1-2 days' },
+      { dept: 'Production Planning & Scheduling', time: '1-2 days' },
+      { dept: 'Procurement & Material Sourcing', time: '2-5 days' },
+      { dept: 'CNC Programming & Routing', time: '1-2 days' },
+      { dept: 'Cost Estimation & Markup', time: '1-2 days' },
+      { dept: 'AS9100 Compliance Review', time: '1-3 days' },
+      { dept: 'Management Quote Approval', time: '1-2 days' },
     ],
     traditionalTotal: '2-3 weeks',
-    guardianDepts: ['Sales', 'Eng', 'Quality', 'Plan', 'Procure', 'Mfg', 'Ship', 'Comply', 'Audit', 'Outside', 'Reflect'],
+    guardianDepts: ['Sales', 'Eng', 'Quality', 'Plan', 'Procure', 'Mfg', 'Ship', 'Comply', 'Audit', 'CNC', 'Outside', 'Reflect'],
     paramLabel1: 'Material',
     paramLabel2: 'Complexity',
     paramLabel3: 'Quantity',
@@ -51,14 +60,14 @@ const DOMAIN_CONFIG = {
     acceptTypes: '',
     processLabel: 'Ara — Execute Kill Chain',
     traditionalSteps: [
-      { dept: 'Intelligence Gathering', time: '2-6 hours' },
-      { dept: 'Target Development', time: '1-4 hours' },
-      { dept: 'Weapons Selection', time: '30-60 min' },
-      { dept: 'EW Assessment', time: '1-2 hours' },
-      { dept: 'Legal Review', time: '1-3 hours' },
-      { dept: 'C2 Approval Chain', time: '1-4 hours' },
-      { dept: 'BDA Planning', time: '30-60 min' },
-      { dept: 'Logistics Check', time: '1-2 hours' },
+      { dept: 'ISR Collection & Fusion', time: '2-6 hours' },
+      { dept: 'Target Development & Nomination', time: '1-4 hours' },
+      { dept: 'Weaponeering & Platform Selection', time: '30-60 min' },
+      { dept: 'EW/SIGINT Assessment', time: '1-2 hours' },
+      { dept: 'JAG/LOAC Legal Review', time: '1-3 hours' },
+      { dept: 'C2 Approval & Deconfliction', time: '1-4 hours' },
+      { dept: 'BDA Collection Planning', time: '30-60 min' },
+      { dept: 'Logistics & Sustainment Check', time: '1-2 hours' },
     ],
     traditionalTotal: '8-24 hours',
     guardianDepts: ['ISR', 'Target', 'Weapons', 'EW', 'Cyber', 'C2', 'Legal', 'BDA', 'Logistics', 'Reflect'],
@@ -157,6 +166,8 @@ export default function Home() {
   const [accessCode, setAccessCode] = useState('');
   const [accessGranted, setAccessGranted] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
 
   const config = DOMAIN_CONFIG[domain];
   const DomainIcon = config.icon;
@@ -381,12 +392,20 @@ export default function Home() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-background text-foreground transition-all duration-700"
-      style={{ backgroundImage: domainBg, backgroundAttachment: 'fixed' }}
-    >
+    <div className="min-h-screen bg-background text-foreground transition-all duration-700 relative">
+      {/* Domain Background Image */}
+      <div
+        className="fixed inset-0 z-0 transition-opacity duration-1000"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, rgba(5,8,15,0.75) 0%, rgba(5,8,15,0.85) 40%, rgba(5,8,15,0.95) 70%, rgba(5,8,15,1) 100%), url(${DOMAIN_BACKGROUNDS[domain]})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        }}
+      />
+      <div className="relative z-10">
       {/* Header */}
-      <header className={`border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 transition-colors duration-500 ${
+      <header className={`border-b glass sticky top-0 z-50 transition-colors duration-500 ${
         domain === 'defense' ? 'border-red-500/30' :
         domain === 'medical' ? 'border-blue-500/30' :
         domain === 'legal' ? 'border-purple-500/30' :
@@ -398,7 +417,7 @@ export default function Home() {
               <Brain className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Guardian OS</h1>
+              <h1 className="text-xl font-bold text-foreground font-heading tracking-tight">Guardian OS</h1>
               <p className="text-xs text-muted-foreground">Learns &middot; Recommends &middot; Alerts &middot; Executes</p>
             </div>
           </div>
@@ -452,15 +471,24 @@ export default function Home() {
               </button>
             </div>
 
-            {isAuthenticated ? (
-              <div className="flex items-center gap-3 ml-3">
-                <span className="text-sm text-muted-foreground">{user?.name}</span>
-              </div>
-            ) : (
-              <Button asChild size="sm" className="ml-3">
-                <a href={getLoginUrl()}>Sign In</a>
+            <div className="flex items-center gap-2 ml-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDemoOpen(true)}
+                className="border-accent/50 text-accent hover:bg-accent/10 text-xs hidden sm:flex"
+              >
+                Request Demo
               </Button>
-            )}
+              <Button
+                size="sm"
+                onClick={() => setEarlyAccessOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white text-xs"
+              >
+                <Rocket className="w-3 h-3 mr-1" />
+                Early Access
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -479,15 +507,15 @@ export default function Home() {
               <Brain className="w-3 h-3" />
               Your Operations Manager — Learns Your Business
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
+            <h2 className="text-4xl md:text-6xl font-extrabold leading-tight font-heading tracking-tight">
               {domain === 'defense' ? (
-                <>Every Kill Chain Node.<br /><span className="text-red-400">Simultaneously.</span></>
+                <>Every Kill Chain Node.<br /><span className="text-gradient-red">Simultaneously.</span></>
               ) : domain === 'medical' ? (
-                <>Every Department.<br /><span className="text-blue-400">Simultaneously.</span></>
+                <>Every Department.<br /><span className="text-gradient-blue">Simultaneously.</span></>
               ) : domain === 'legal' ? (
-                <>Every Legal Department.<br /><span className="text-purple-400">Simultaneously.</span></>
+                <>Every Legal Department.<br /><span className="text-gradient-purple">Simultaneously.</span></>
               ) : (
-                <>Every Department.<br /><span className="text-accent">Simultaneously.</span></>
+                <>Every Department.<br /><span className="text-gradient-cyan">Simultaneously.</span></>
               )}
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl">
@@ -500,10 +528,12 @@ export default function Home() {
 
           {/* Architecture Comparison: Manual Sequential vs Guardian Parallel */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
-            {/* Traditional: Manual Research & Handoff */}
-            <div className="p-5 rounded-lg border border-border bg-card/30">
-              <p className="text-xs text-red-400/80 uppercase tracking-wider mb-3 font-semibold">
-                Current Standard — Manual Research & Handoff
+            {/* Traditional: AI Sequential */}
+            <div className="p-5 rounded-xl border border-red-500/20 glass-light relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent pointer-events-none" />
+              <div className="relative">
+              <p className="text-xs text-red-400/80 uppercase tracking-wider mb-3 font-semibold font-heading">
+                Current AI — Sequential Processing
               </p>
               <div className="space-y-1.5">
                 {config.traditionalSteps.map((step, i) => (
@@ -521,13 +551,16 @@ export default function Home() {
                 <span className="text-sm font-bold text-red-400">{config.traditionalTotal}</span>
               </div>
               <p className="text-[10px] text-muted-foreground/60 mt-2">
-                Each step waits for the previous step to complete. Manual research, phone calls, emails, meetings, handoffs between departments.
+                Even with AI tools, each step still waits for the previous step to complete. One department at a time. Sequential handoffs between teams.
               </p>
+              </div>{/* end relative */}
             </div>
 
             {/* Guardian: Parallel Architecture */}
-            <div className={`p-5 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : domain === 'legal' ? 'border-purple-500/30 bg-purple-500/5' : 'border-accent/30 bg-accent/5'}`}>
-              <p className={`text-xs ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : domain === 'legal' ? 'text-purple-400' : 'text-accent'} uppercase tracking-wider mb-3 font-semibold`}>
+            <div className={`p-5 rounded-xl border relative overflow-hidden ${domain === 'defense' ? 'border-red-500/30' : domain === 'medical' ? 'border-blue-500/30' : domain === 'legal' ? 'border-purple-500/30' : 'border-accent/30'} glass-light`}>
+              <div className={`absolute inset-0 pointer-events-none ${domain === 'defense' ? 'bg-gradient-to-br from-red-500/10 to-transparent' : domain === 'medical' ? 'bg-gradient-to-br from-blue-500/10 to-transparent' : domain === 'legal' ? 'bg-gradient-to-br from-purple-500/10 to-transparent' : 'bg-gradient-to-br from-accent/10 to-transparent'}`} />
+              <div className="relative">
+              <p className={`text-xs ${domain === 'defense' ? 'text-red-400' : domain === 'medical' ? 'text-blue-400' : domain === 'legal' ? 'text-purple-400' : 'text-accent'} uppercase tracking-wider mb-3 font-semibold font-heading`}>
                 Guardian OS — Neural Architecture
               </p>
               <div className="flex items-center gap-1 text-xs flex-wrap mb-3">
@@ -563,12 +596,13 @@ export default function Home() {
                   <span>Perfects execution over time. Gets smarter every day.</span>
                 </div>
               </div>
+              </div>{/* end relative */}
             </div>
           </div>
         </section>
 
         {/* Input Section */}
-        <Card className="border-border bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/50 glass-light">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {domain === 'manufacturing' ? (
@@ -591,7 +625,7 @@ export default function Home() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer transition-all hover:border-accent hover:bg-accent/5"
+                  className="border-2 border-dashed border-accent/30 rounded-xl p-8 text-center cursor-pointer transition-all hover:border-accent hover:bg-accent/10 hover:shadow-[0_0_30px_rgba(0,217,255,0.1)]"
                 >
                   <input
                     type="file"
@@ -836,10 +870,6 @@ export default function Home() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Complexity ({complexity}/10)</label>
-                    <input type="range" min="1" max="10" value={complexity} onChange={(e) => setComplexity(Number(e.target.value))} className="w-full accent-accent" />
-                  </div>
-                  <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground">Quantity</label>
                     <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground text-sm" />
                   </div>
@@ -964,10 +994,10 @@ export default function Home() {
         {/* Processing Results */}
         {processingResult && (
           <div className="space-y-6">
-            {/* Speed Comparison: Guardian vs Manual Process */}
-            <div className={`p-6 rounded-lg border ${domain === 'defense' ? 'border-red-500/30 bg-red-500/5' : domain === 'medical' ? 'border-blue-500/30 bg-blue-500/5' : domain === 'legal' ? 'border-purple-500/30 bg-purple-500/5' : 'border-accent/30 bg-accent/5'}`}>
+            {/* Speed Comparison: Guardian vs AI Sequential */}
+            <div className={`p-6 rounded-xl border glass-light ${domain === 'defense' ? 'border-red-500/30' : domain === 'medical' ? 'border-blue-500/30' : domain === 'legal' ? 'border-purple-500/30' : 'border-accent/30'}`}>
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-4 text-center">
-                Ara Neural Architecture vs. Current Standard (Manual Research & Handoff)
+                Ara Neural Architecture vs. Current AI (Sequential Processing)
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div>
@@ -981,9 +1011,9 @@ export default function Home() {
                   <p className="text-[10px] text-muted-foreground mt-1">parallel processing</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Manual Process</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">AI Sequential</p>
                   <p className="text-3xl font-bold text-red-400">{config.traditionalTotal}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">sequential handoffs</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">one dept at a time</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Improvement</p>
@@ -1267,7 +1297,7 @@ export default function Home() {
             )}
 
             {/* Individual Agent Results — Expandable */}
-            <Card className="border-border bg-card/50 backdrop-blur-sm">
+            <Card className="border-border/50 glass-light">
               <CardHeader>
                 <CardTitle>{domain === 'defense' ? 'Kill Chain Node Reports' : domain === 'medical' ? 'Emergency Response Department Reports' : domain === 'legal' ? 'Legal Analysis Department Reports' : 'Department Reports'}</CardTitle>
               </CardHeader>
@@ -1314,22 +1344,39 @@ export default function Home() {
           </div>
         )}
 
+        {/* CTA Section */}
+        <ContactSection
+          onDemoClick={() => setDemoOpen(true)}
+          onEarlyAccessClick={() => setEarlyAccessOpen(true)}
+        />
+
         {/* Footer */}
-        <footer className="border-t border-border pt-6 pb-8">
-          <div className="text-center space-y-2">
+        <footer className="border-t border-border/30 pt-8 pb-10">
+          <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-2">
-              <Brain className="w-4 h-4 text-accent" />
-              <p className="text-xs text-foreground font-semibold">
-                Guardian OS — Learns Your Business. Perfects the Execution.
+              <Brain className="w-5 h-5 text-accent" />
+              <p className="text-sm text-foreground font-bold font-heading tracking-tight">
+                Guardian OS
               </p>
             </div>
             <p className="text-xs text-muted-foreground max-w-xl mx-auto">
-              Your operations manager. Learns and adjusts to your business model. Provides recommendations, alerts concerns, 
-              and executes when necessary. Non-intrusive. Sits on top of your current systems.
+              Learns your business. Recommends. Alerts. Executes. Non-intrusive — sits on top of your current systems.
+            </p>
+            <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+              <span>Richard Cruz</span>
+              <span className="text-accent">(951) 233-5475</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground/50">
+              &copy; {new Date().getFullYear()} Guardian Sentinel. All rights reserved.
             </p>
           </div>
         </footer>
       </main>
+
+      {/* Lead Capture Modals */}
+      <DemoRequestModal open={demoOpen} onOpenChange={setDemoOpen} />
+      <EarlyAccessModal open={earlyAccessOpen} onOpenChange={setEarlyAccessOpen} />
+      </div>{/* end relative z-10 */}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, manufacturingQuotes, learningMetrics, agentLogs, compliancePackages } from "../drizzle/schema";
+import { InsertUser, users, manufacturingQuotes, learningMetrics, agentLogs, compliancePackages, leads } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -228,6 +228,38 @@ export async function getCompliancePackages(quoteId: number) {
     return result;
   } catch (error) {
     console.error("[Database] Failed to get compliance packages:", error);
+    return [];
+  }
+}
+
+export async function saveLead(lead: typeof leads.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save lead: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(leads).values(lead);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to save lead:", error);
+    throw error;
+  }
+}
+
+export async function getLeads() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get leads: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(leads);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get leads:", error);
     return [];
   }
 }

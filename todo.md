@@ -183,3 +183,46 @@
 - [x] Add OutsideProcessesAgent to server/agents.ts (backend)
 - [x] Add 'Outside' to Manufacturing guardianDepts in Home.tsx
 - [x] Add Outside Processes PO Requirements document to CompliancePackage component
+
+## Lead Capture CTAs
+- [x] Create leads database table (name, email, company, type, domain interest, timeline, company size)
+- [x] Build tRPC procedures for demo request and early access submissions
+- [x] Build Request a Demo modal form
+- [x] Build Join Early Access modal form with domain selection and timeline
+- [x] Add CTA buttons to header navigation
+- [x] Add CTA section to landing page
+- [x] Wire owner notifications on form submission
+- [ ] Write tests for lead capture procedures
+
+## Assembly Detection & BOM Adjustment
+- [ ] When assembly is detected, break into components with buy vs. make decisions
+- [ ] Roll up BOM properly for multi-component assemblies
+- [ ] Adjust pricing/quoting for assembly vs single-part
+
+## Auto-Complexity Determination
+- [x] Remove user-facing complexity slider
+- [x] Auto-determine complexity from drawing/input analysis (features, tolerances, material, assembly)
+
+## CNC Programming Agent
+- [x] Add CNCProgrammingAgent to shared/agentDefinitions.ts
+- [x] Add CNCProgrammingAgent to server/agents.ts with strategy-level output
+- [x] Add Digital Twin note in agent output (actual G-code requires Digital Twin integration)
+- [x] Update Home.tsx department badges to include CNC Programming
+- [x] Update CNC agent prompt for detailed shop-floor routing (OP-10, OP-20 format)
+- [x] Include machine assignment (HAAS VF-3 MACH21), workholding, specific cuts, stock removal
+- [x] Format as real routing sheet with operation numbers, stations, and instructions
+
+## Visual Polish Pass
+- [x] Redesign header with premium nav styling and consistent CTA hierarchy
+- [x] Add depth to hero section — gradient text, glow effects, visual anchor graphic
+- [ ] Redesign comparison boxes with visual drama — the key selling point needs to command attention
+- [ ] Polish upload section — premium drop zone, styled form elements, premium action button
+- [ ] Redesign CTA section with visual weight and contact info styling
+- [x] Add background variation per section — break visual monotony
+- [x] Improve typography hierarchy — varied weights, sizes, letter-spacing
+- [x] Add subtle shadows, gradients, and layering for depth
+
+## Domain-Specific Backgrounds
+- [x] Find/create themed background images for each domain tab
+- [x] Apply transparent overlay backgrounds per domain (manufacturing, defense, medical, legal)
+- [x] Replace flat black background with domain-themed visuals
