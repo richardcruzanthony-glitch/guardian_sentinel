@@ -235,7 +235,7 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
               </tr>
             </thead>
             <tbody>
-              <tr><td className="border border-border p-2">Part Number</td><td className="border border-border p-2">{result.fileName.replace(/\.[^.]+$/, '')}</td></tr>
+              <tr><td className="border border-border p-2">Part Number</td><td className="border border-border p-2">{result.fileName ? result.fileName.replace(/\.[^.]+$/, '') : 'PART-001'}</td></tr>
               <tr><td className="border border-border p-2">Part Name</td><td className="border border-border p-2">Bracket Assembly</td></tr>
               <tr><td className="border border-border p-2">Drawing Rev</td><td className="border border-border p-2">A (Initial)</td></tr>
               <tr><td className="border border-border p-2">Material</td><td className="border border-border p-2">{engData.recommendedMaterial || 'Aluminum 6061-T6'}</td></tr>

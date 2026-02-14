@@ -9,6 +9,7 @@ import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualiz
 import { CompliancePackage } from "@/components/CompliancePackage";
 import { runHybridProcessing, type AgentResult, type HybridProcessingResult } from "@/lib/hybridOrchestrator";
 import { DemoRequestModal, EarlyAccessModal, ContactSection } from "@/components/LeadCapture";
+import { SHOWCASE_PARTS, type ShowcasePart } from "@/lib/showcaseParts";
 import { Link } from 'wouter';
 import { Rocket } from 'lucide-react';
 
@@ -169,6 +170,7 @@ export default function Home() {
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
+  const [selectedShowcase, setSelectedShowcase] = useState<ShowcasePart | null>(null);
 
   const config = DOMAIN_CONFIG[domain];
   const DomainIcon = config.icon;
@@ -184,6 +186,39 @@ export default function Home() {
     setScenarioText('');
     setComplexity(5);
     setQuantity(1);
+    setSelectedShowcase(null);
+  }, []);
+
+  const handleShowcaseSelect = useCallback((part: ShowcasePart) => {
+    setSelectedShowcase(part);
+    setSelectedFile(null);
+    setPreviewUrl(part.imageUrl);
+    setMaterial(part.material);
+    // Convert the showcase result into the format CompliancePackage expects
+    const r = part.result;
+    const agents = Object.entries(r.agentResults).map(([agentName, agentData]: [string, any]) => ({
+      agentName,
+      department: agentName.replace(' Agent', ''),
+      status: agentData.status || 'completed',
+      duration: Math.random() * 2000 + 500,
+      confidence: 0.92 + Math.random() * 0.06,
+      data: agentData.result || agentData,
+    }));
+    setProcessingResult({
+      ...r.summary,
+      imageUrl: r.imageUrl,
+      drawingAnalysis: r.drawingAnalysis,
+      agents,
+      agentCount: agents.length,
+      totalDuration: (r.summary.processingTime || 3.2) * 1000,
+      summary: {
+        ...r.summary,
+        totalPrice: r.summary.estimatedCost || r.summary.totalPrice,
+        leadTimeDays: r.summary.leadTimeDays,
+        riskLevel: r.summary.riskLevel || 'medium',
+      },
+    });
+    setLiveAgentStatuses(new Map());
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -602,8 +637,68 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Showcase Parts Gallery — Manufacturing Only */}
+        {domain === 'manufacturing' && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-foreground font-heading">Sample Parts — Pre-Processed</h3>
+                <p className="text-xs text-muted-foreground mt-1">Click a part to see the full compliance package instantly. No upload required.</p>
+              </div>
+              {selectedShowcase && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-accent border-accent/30"
+                  onClick={() => {
+                    setSelectedShowcase(null);
+                    setProcessingResult(null);
+                    setPreviewUrl(null);
+                  }}
+                >
+                  Clear &amp; Upload Your Own
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {SHOWCASE_PARTS.map((part) => (
+                <button
+                  key={part.id}
+                  onClick={() => handleShowcaseSelect(part)}
+                  className={`text-left p-4 rounded-xl border transition-all group ${
+                    selectedShowcase?.id === part.id
+                      ? 'border-accent bg-accent/10 shadow-[0_0_20px_rgba(0,217,255,0.15)]'
+                      : 'border-border/50 bg-card/30 hover:border-accent/50 hover:bg-card/50'
+                  }`}
+                >
+                  <div className="flex gap-4">
+                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-white border border-border/30 shrink-0">
+                      <img src={part.imageUrl} alt={part.name} className="w-full h-full object-contain" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-foreground truncate">{part.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{part.description}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{part.material}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{part.complexity}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{part.operations} Ops</span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedShowcase?.id === part.id && (
+                    <div className="mt-3 pt-3 border-t border-accent/20 flex items-center gap-2 text-xs text-accent">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Loaded — scroll down to see full compliance package</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Input Section */}
-        <Card className="border-border/50 glass-light">
+        <Card className={`border-border/50 glass-light ${domain === 'manufacturing' && selectedShowcase ? 'opacity-60' : ''}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {domain === 'manufacturing' ? (
@@ -615,7 +710,7 @@ export default function Home() {
               ) : (
                 <Ambulance className="w-5 h-5 text-blue-400" />
               )}
-              {config.uploadLabel}
+              {domain === 'manufacturing' && selectedShowcase ? 'Or Upload Your Own Drawing' : config.uploadLabel}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
