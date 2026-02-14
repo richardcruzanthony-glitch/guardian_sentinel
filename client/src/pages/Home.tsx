@@ -211,7 +211,12 @@ export default function Home() {
       agents,
       agentCount: agents.length,
       totalDuration: (r.summary.processingTime || 3.2) * 1000,
-      summary: r.summary,
+      summary: {
+        ...r.summary,
+        totalPrice: r.summary.estimatedCost || r.summary.totalPrice,
+        leadTimeDays: r.summary.leadTimeDays,
+        riskLevel: r.summary.riskLevel || 'medium',
+      },
     });
     setLiveAgentStatuses(new Map());
   }, []);
