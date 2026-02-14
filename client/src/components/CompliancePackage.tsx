@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink, Code2 } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Printer, Download, CheckCircle2, AlertTriangle, ClipboardList, Wrench, Package, Ruler, Eye, ExternalLink, Code2, Layers } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StageDrawing, StageDrawingFull } from '@/components/StageDrawing';
@@ -633,25 +633,20 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
                             <span className="text-muted-foreground text-[10px]">—</span>
                           )}
                         </td>
-                        {/* DRAWING COLUMN */}
+                        {/* DRAWING COLUMN — lazy render on click */}
                         <td className="border border-border p-2 text-center">
                           {stageDraw ? (
                             <button
                               onClick={() => setExpandedDrawing(expandedDrawing === `draw-${i}` ? null : `draw-${i}`)}
-                              className={`cursor-pointer inline-block ${
-                                expandedDrawing === `draw-${i}` ? 'ring-1 ring-accent rounded' : ''
+                              className={`inline-flex flex-col items-center gap-0.5 text-[9px] px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                                expandedDrawing === `draw-${i}`
+                                  ? 'bg-green-500/30 text-green-300 border border-green-400/50'
+                                  : 'bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25'
                               }`}
-                              title="Click to expand stage drawing"
+                              title="Click to view stage drawing"
                             >
-                              <StageDrawing
-                                opNumber={op.opNumber}
-                                title={stageDraw.title}
-                                description={stageDraw.description}
-                                machinedFeatures={Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures : []}
-                                remainingStock={stageDraw.remainingStock}
-                                fixturing={stageDraw.fixturing}
-                                size="thumb"
-                              />
+                              <Layers className="w-3.5 h-3.5" />
+                              <span className="font-bold tracking-wider">STAGE</span>
                             </button>
                           ) : (
                             <span className="text-muted-foreground text-[10px]">—</span>

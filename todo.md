@@ -296,3 +296,7 @@
 - [x] Fix GENERATE button not producing stage drawing images — replaced with client-side SVG drawings (no API needed)
 - [x] Fix OP-20+ missing program and drawing — agent prompt updated to require one per CNC op
 - [x] Ensure every CNC operation gets its own program and stage drawing in the output
+
+## Performance: Lazy Stage Drawing Rendering
+- [x] DRAWING column shows placeholder icon (STAGE button) instead of SVG on initial load
+- [x] SVG stage drawing only renders when user clicks the drawing cell (expanded panel)
