@@ -195,9 +195,9 @@
 - [ ] Write tests for lead capture procedures
 
 ## Assembly Detection & BOM Adjustment
-- [ ] When assembly is detected, break into components with buy vs. make decisions
-- [ ] Roll up BOM properly for multi-component assemblies
-- [ ] Adjust pricing/quoting for assembly vs single-part
+- [x] When assembly is detected, break into components with buy vs. make decisions
+- [x] Roll up BOM properly for multi-component assemblies
+- [x] Adjust pricing/quoting for assembly vs single-part
 
 ## Auto-Complexity Determination
 - [x] Remove user-facing complexity slider
@@ -215,9 +215,9 @@
 ## Visual Polish Pass
 - [x] Redesign header with premium nav styling and consistent CTA hierarchy
 - [x] Add depth to hero section — gradient text, glow effects, visual anchor graphic
-- [ ] Redesign comparison boxes with visual drama — the key selling point needs to command attention
-- [ ] Polish upload section — premium drop zone, styled form elements, premium action button
-- [ ] Redesign CTA section with visual weight and contact info styling
+- [x] Redesign comparison boxes with visual drama — the key selling point needs to command attention
+- [x] Polish upload section — premium drop zone, styled form elements, premium action button
+- [x] Redesign CTA section with visual weight and contact info styling
 - [x] Add background variation per section — break visual monotony
 - [x] Improve typography hierarchy — varied weights, sizes, letter-spacing
 - [x] Add subtle shadows, gradients, and layering for depth
@@ -226,3 +226,11 @@
 - [x] Find/create themed background images for each domain tab
 - [x] Apply transparent overlay backgrounds per domain (manufacturing, defense, medical, legal)
 - [x] Replace flat black background with domain-themed visuals
+
+## Cross-Referenced Routing & Bubble Annotations
+- [x] Update Engineering Agent to output numbered bubble annotations per feature (dimensions, tolerances, holes, surfaces)
+- [x] Update CNC Programming Agent to reference bubble numbers in each operation (REF BUBBLE 1, 2, 3)
+- [x] Update Quality/Inspection Agent to reference bubble numbers for inspection requirements
+- [x] Add Routing Sheet document to CompliancePackage with OP-level detail and bubble references
+- [x] Add Bubble Annotation Map document to CompliancePackage (bubble number → feature → tolerance → inspection method)
+- [x] Cross-link routing, bubbles, and inspection into unified shop package

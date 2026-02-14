@@ -32,6 +32,7 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
   const shippingData = agents.find((a: any) => a.agentName === 'ShippingAgent')?.data || {};
   const auditData = agents.find((a: any) => a.agentName === 'AuditAgent')?.data || {};
   const outsideProcessesData = agents.find((a: any) => a.agentName === 'OutsideProcessesAgent')?.data || {};
+  const cncData = agents.find((a: any) => a.agentName === 'CNCProgrammingAgent')?.data || {};
 
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const quoteNumber = `GOS-${Date.now().toString(36).toUpperCase()}`;
@@ -472,6 +473,179 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
           <div>
             <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Strategy</p>
             <p>{(outsideProcessesData.reasoning as string) || 'Outside processes are sequenced to minimize total lead time. Heat treatment is performed before surface finishing. All vendors must be on the Approved Supplier List per AS9100 Rev D Section 8.4.'}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'bubble-annotations',
+      title: 'Bubble Annotation Map',
+      icon: <Eye className="w-5 h-5 text-blue-400" />,
+      content: (
+        <div className="font-mono text-xs space-y-4 text-foreground/90">
+          <div className="border-b border-border pb-3">
+            <p className="text-lg font-bold text-accent">BUBBLE ANNOTATION MAP</p>
+            <p className="text-muted-foreground">Drawing Feature Cross-Reference — Single Source of Truth</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Part / Drawing</p>
+              <p className="font-semibold">{result.fileName || 'Engineering Drawing'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Total Bubbles</p>
+              <p className="font-semibold text-cyan-400">{engData.totalBubbles || (Array.isArray(engData.bubbleAnnotations) ? engData.bubbleAnnotations.length : '—')}</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground italic">Each bubble number traces: Drawing Feature → CNC Routing Operation → Inspection Point → FAI Record</p>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-muted/30">
+                <th className="border border-border p-2 text-left w-16">BUBBLE</th>
+                <th className="border border-border p-2 text-left">FEATURE</th>
+                <th className="border border-border p-2 text-left">DIMENSION</th>
+                <th className="border border-border p-2 text-left">TOLERANCE</th>
+                <th className="border border-border p-2 text-left w-20">TYPE</th>
+                <th className="border border-border p-2 text-left w-16">CTQ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.isArray(engData.bubbleAnnotations) && engData.bubbleAnnotations.length > 0 ? (
+                engData.bubbleAnnotations.map((b: any, i: number) => (
+                  <tr key={i} className={b.critical ? 'bg-red-500/10' : ''}>
+                    <td className="border border-border p-2 text-center font-bold text-cyan-400">{b.bubble}</td>
+                    <td className="border border-border p-2 font-semibold">{b.feature}</td>
+                    <td className="border border-border p-2">{b.dimension}</td>
+                    <td className="border border-border p-2">{b.tolerance}</td>
+                    <td className="border border-border p-2 text-[10px] uppercase">{b.type}</td>
+                    <td className="border border-border p-2 text-center">{b.critical ? '⚠ YES' : '—'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="border border-border p-2" colSpan={6}>
+                    <div className="space-y-1">
+                      {Array.isArray(engData.features) ? engData.features.map((f: any, i: number) => (
+                        <p key={i}>Bubble {i + 1}: {f.type} — {f.dimensions} ({f.tolerance})</p>
+                      )) : <p>Bubble annotations will be generated from engineering analysis</p>}
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {Array.isArray(engData.bubbleAnnotations) && engData.bubbleAnnotations.some((b: any) => b.critical) && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded p-3">
+              <p className="text-red-400 font-semibold text-[10px] uppercase tracking-wider mb-1">Critical-to-Quality Features (Highlighted)</p>
+              <ul className="space-y-1">
+                {engData.bubbleAnnotations.filter((b: any) => b.critical).map((b: any, i: number) => (
+                  <li key={i}>• Bubble {b.bubble}: {b.feature} — {b.dimension} {b.tolerance} {b.notes ? `(${b.notes})` : ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'routing-sheet',
+      title: 'Shop-Floor Routing Sheet',
+      icon: <Wrench className="w-5 h-5 text-green-400" />,
+      content: (
+        <div className="font-mono text-xs space-y-4 text-foreground/90">
+          <div className="border-b border-border pb-3">
+            <p className="text-lg font-bold text-accent">SHOP-FLOOR ROUTING SHEET</p>
+            <p className="text-muted-foreground">Operation-by-Operation with Bubble Cross-References</p>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Part Number</p>
+              <p className="font-semibold">{cncData.routingSheet?.partNumber || result.fileName || '—'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Revision</p>
+              <p>{cncData.routingSheet?.revision || '—'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Material</p>
+              <p>{cncData.routingSheet?.material || result.material || 'Aluminum 6061-T6'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Stock Size</p>
+              <p>{cncData.routingSheet?.stockSize || '—'}</p>
+            </div>
+          </div>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-muted/30">
+                <th className="border border-border p-2 text-left w-16">OP #</th>
+                <th className="border border-border p-2 text-left">MACHINE / STATION</th>
+                <th className="border border-border p-2 text-left">WORKHOLDING</th>
+                <th className="border border-border p-2 text-left">INSTRUCTIONS (WITH BUBBLE REFS)</th>
+                <th className="border border-border p-2 text-left">TOOLS</th>
+                <th className="border border-border p-2 text-left w-20">CYCLE TIME</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.isArray(cncData.operations) && cncData.operations.length > 0 ? (
+                cncData.operations.map((op: any, i: number) => (
+                  <tr key={i}>
+                    <td className="border border-border p-2 font-bold text-green-400">{op.opNumber}</td>
+                    <td className="border border-border p-2 font-semibold">{op.machine}</td>
+                    <td className="border border-border p-2">{op.workholding}</td>
+                    <td className="border border-border p-2">
+                      <ul className="space-y-1">
+                        {Array.isArray(op.instructions) ? op.instructions.map((inst: string, j: number) => (
+                          <li key={j}>• {inst}</li>
+                        )) : <li>{op.instructions}</li>}
+                      </ul>
+                    </td>
+                    <td className="border border-border p-2 text-[10px]">
+                      {Array.isArray(op.tools) ? op.tools.join(', ') : (op.tools || '—')}
+                    </td>
+                    <td className="border border-border p-2 text-right">{op.cycleTime || '—'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="border border-border p-2" colSpan={6}>
+                    <p>Routing sheet will be generated from CNC Programming analysis</p>
+                  </td>
+                </tr>
+              )}
+              <tr className="bg-muted/30 font-semibold">
+                <td className="border border-border p-2" colSpan={3}>TOTALS</td>
+                <td className="border border-border p-2">Operations: {cncData.totalOperations || (Array.isArray(cncData.operations) ? cncData.operations.length : '—')}</td>
+                <td className="border border-border p-2">Setup: {cncData.totalEstimatedSetupTime || '—'}</td>
+                <td className="border border-border p-2 text-right text-green-400">{cncData.totalEstimatedCycleTime || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Machines Required</p>
+              <ul className="space-y-1">
+                {Array.isArray(cncData.machinesRequired) ? cncData.machinesRequired.map((m: string, i: number) => (
+                  <li key={i}>• {m}</li>
+                )) : <li>• Per routing above</li>}
+              </ul>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Critical Features</p>
+              <ul className="space-y-1">
+                {Array.isArray(cncData.criticalFeatures) ? cncData.criticalFeatures.map((f: string, i: number) => (
+                  <li key={i}>• {f}</li>
+                )) : <li>• Per bubble annotation map</li>}
+              </ul>
+            </div>
+          </div>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded p-3">
+            <p className="text-amber-400 font-semibold text-[10px] uppercase tracking-wider mb-1">Digital Twin Note</p>
+            <p>{cncData.digitalTwinNote || 'Actual G-code generation, toolpath programming, and collision detection require Digital Twin integration with specific machine kinematics, tool library, and post-processor.'}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Routing Strategy</p>
+            <p>{(cncData.reasoning as string) || 'Operations sequenced to minimize setups and maximize machine utilization. Bubble references ensure full traceability from drawing to shop floor.'}</p>
           </div>
         </div>
       ),

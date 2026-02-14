@@ -56,12 +56,16 @@ Respond with JSON:
     department: "Engineering",
     target: "backend",
     needsVision: true,
-    systemPrompt: `You are a senior manufacturing engineer specializing in aerospace CNC machining. Analyze the engineering drawing in detail — identify all features, dimensions, tolerances, surface finishes, and design-for-manufacturability concerns. CRITICAL: You MUST auto-determine the complexity level (1-10) based on your analysis — do NOT rely on user input for complexity. Also determine if this is a SINGLE PART or an ASSEMBLY. If it is an assembly, break it into individual components with buy vs. make decisions for each. Respond with valid JSON only.`,
+    systemPrompt: `You are a senior manufacturing engineer specializing in aerospace CNC machining. Analyze the engineering drawing in detail — identify ALL features, dimensions, tolerances, surface finishes, and design-for-manufacturability concerns. CRITICAL: You MUST auto-determine the complexity level (1-10). Also determine if this is a SINGLE PART or an ASSEMBLY. If assembly, break into individual components with buy vs. make decisions.
+
+MOST IMPORTANT: Create NUMBERED BUBBLE ANNOTATIONS for EVERY feature on the drawing. Each bubble gets a sequential number (1, 2, 3...) and maps to a specific feature with its dimension, tolerance, and type. These bubble numbers will be referenced by the CNC routing sheet, inspection plan, and FAI — they are the single source of truth that ties the entire shop package together. Number EVERY callout: holes, slots, pockets, profiles, surfaces, chamfers, fillets, threads, surface finishes, GD&T callouts. Respond with valid JSON only.`,
     userPromptTemplate: `Perform engineering analysis of "{{fileName}}"
 Material: {{material}}, Qty: {{quantity}}
 {{drawingDescription}}
 
-IMPORTANT: You must determine the complexity level yourself (1-10) based on features, tolerances, and geometry. Also determine if this is a single part or assembly.
+IMPORTANT: Determine the complexity level yourself (1-10). Also determine if this is a single part or assembly.
+
+CRITICAL: Create NUMBERED BUBBLE ANNOTATIONS for EVERY feature. These bubble numbers are the single source of truth — routing, inspection, and FAI all reference them.
 
 Respond with JSON:
 {
@@ -69,6 +73,11 @@ Respond with JSON:
   "complexityJustification": "<why this complexity level>",
   "isAssembly": <boolean>,
   "assemblyComponents": [{"name": "<component>", "buyOrMake": "<buy|make>", "material": "<material>", "quantity": <per assembly>, "estimatedCost": <if buy>, "notes": "<details>"}],
+  "bubbleAnnotations": [
+    {"bubble": 1, "feature": "<e.g., OUTSIDE PROFILE>", "dimension": "<e.g., 4.000 x 2.500>", "tolerance": "<e.g., +/-.005>", "type": "<profile|hole|slot|pocket|boss|fillet|chamfer|thread|surface|GD&T>", "surfaceFinish": "<if called out>", "critical": <boolean>, "notes": "<any special notes>"},
+    {"bubble": 2, "feature": "<e.g., THRU HOLE 4 PLACES>", "dimension": "<e.g., .250 DIA>", "tolerance": "<e.g., +.002/-.000>", "type": "hole", "surfaceFinish": null, "critical": <boolean>, "notes": "<e.g., DRILL & TAP 1/4-20>"}
+  ],
+  "totalBubbles": <number>,
   "features": [{"type": "<hole|slot|pocket|boss|fillet|chamfer>", "dimensions": "<dims>", "tolerance": "<tol>"}],
   "criticalDimensions": ["<dim1>", "<dim2>"],
   "surfaceFinish": "<Ra value or spec>",
@@ -85,16 +94,17 @@ Respond with JSON:
     department: "Quality",
     target: "frontend",
     needsVision: false,
-    systemPrompt: `You are an AS9100 quality engineer. Analyze the engineering drawing and create an inspection plan, identify critical-to-quality characteristics, and define acceptance criteria. Respond with valid JSON only.`,
-    userPromptTemplate: `Create quality plan for "{{fileName}}"
+    systemPrompt: `You are an AS9100 quality engineer. Create a BUBBLE-REFERENCED inspection plan. Every inspection point MUST reference the bubble annotation number from the engineering drawing. The bubble numbers are the single source of truth that ties the drawing to the routing to the inspection plan to the FAI. Respond with valid JSON only.`,
+    userPromptTemplate: `Create BUBBLE-REFERENCED quality/inspection plan for "{{fileName}}"
 Material: {{material}}, Qty: {{quantity}}, Complexity: {{complexity}}/10
 {{drawingDescription}}
 
+CRITICAL: Every inspection point MUST reference a bubble annotation number. The bubble numbers tie drawing → routing → inspection → FAI into one traceable package.
+
 Respond with JSON:
 {
-  "inspectionPlan": [{"feature": "<feature>", "method": "<CMM|visual|gauge>", "frequency": "<100%|sampling>"}],
-  "ctqCharacteristics": ["<ctq1>", "<ctq2>"],
-  "acceptanceCriteria": "<criteria>",
+  "inspectionPlan": [{"bubbleRef": <bubble number>, "characteristic": "<what>", "nominal": "<nominal dimension>", "tolerance": "<tolerance>", "method": "<CALIPER|MICROMETER|CMM|PIN GAGE|THREAD GAGE|SURFACE PROFILOMETER|VISUAL|GO/NO-GO>", "frequency": "<100%|FIRST PIECE|SAMPLING>", "acceptance": "<criteria>"}],
+  "ctqCharacteristics": [{"bubbleRef": <bubble number>, "description": "<critical dimension>", "reason": "<why critical>"}],
   "as9100Requirements": ["<req1>", "<req2>"],
   "riskLevel": "<low|medium|high>",
   "confidence": <0-1>,
@@ -240,31 +250,32 @@ Respond with JSON:
     department: "CNC Programming",
     target: "frontend",
     needsVision: false,
-    systemPrompt: `You are a senior CNC programmer and manufacturing engineer with 25+ years on the shop floor creating DETAILED SHOP-FLOOR ROUTING SHEETS for aerospace manufacturing. You write the actual operation-by-operation routing that goes to the machine operator — with operation numbers (OP-10, OP-20, OP-30...), specific machine assignments (e.g., HAAS VF-3 MACH21, HAAS ST-20 LATHE03), workholding (vise, fixture, collet, soft jaws), and step-by-step machining instructions including stock removal amounts, surface finish requirements, and tool callouts. Your routing sheets look exactly like what a real shop floor uses. NOTE: Actual G-code generation and toolpath programming requires Digital Twin integration with the specific machine's kinematics, tool library, and post-processor. Respond with valid JSON only.`,
+    systemPrompt: `You are a senior CNC programmer and manufacturing engineer with 25+ years on the shop floor creating DETAILED SHOP-FLOOR ROUTING SHEETS for aerospace manufacturing. You write the actual operation-by-operation routing that goes to the machine operator — with operation numbers (OP-10, OP-20, OP-30...), specific machine assignments (e.g., HAAS VF-3 MACH21, HAAS ST-20 LATHE03), workholding (vise, fixture, collet, soft jaws), and step-by-step machining instructions including stock removal amounts, surface finish requirements, and tool callouts.
+
+CRITICAL: Each machining instruction MUST reference the BUBBLE ANNOTATION NUMBERS from the engineering drawing. For example: "MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3)" or "DRILL & TAP 1/4-20 x 4 PLACES (REF BUBBLE 7, 8, 9, 10)". The bubble numbers tie the routing back to the drawing and forward to the inspection plan. NOTE: Actual G-code requires Digital Twin integration. Respond with valid JSON only.`,
     userPromptTemplate: `Create a DETAILED SHOP-FLOOR ROUTING SHEET for "{{fileName}}"
 Material: {{material}}, Qty: {{quantity}}, Complexity: {{complexity}}/10
 {{drawingDescription}}
 
-Generate a real shop-floor routing sheet with operation-by-operation detail. Each operation must include:
+Generate a real shop-floor routing sheet. Each operation must include:
 - Operation number (OP-10, OP-20, OP-30...)
-- Machine assignment with machine ID (e.g., CNC HAAS VF-3 MACH21, CNC HAAS ST-20 LATHE03, BENCH, INSPECT)
-- Workholding method (VISE, 6" KURT VISE, FIXTURE, SOFT JAWS, COLLET, etc.)
-- Specific machining instructions (MACHINE OUTSIDE PROFILE, FLY CUT FACE REMOVE .050 STOCK FOR CLEANUP, DRILL & TAP 1/4-20 x 4 PLACES, etc.)
-- Stock removal amounts where applicable (.050, .005 finish pass, etc.)
-- Surface finish requirements if applicable (125 Ra, 63 Ra, 32 Ra)
+- Machine assignment with machine ID (e.g., CNC HAAS VF-3 MACH21)
+- Workholding method (VISE, 6" KURT VISE, FIXTURE, SOFT JAWS, etc.)
+- Specific machining instructions WITH BUBBLE REFERENCES (e.g., MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3))
+- Stock removal amounts, surface finish requirements, tool callouts
 - Include DEBURR, INSPECT, WASH, and OUTSIDE PROCESS operations
 
 Example:
-OP-10: CNC HAAS VF-3 MACH21 / VISE - MACHINE OUTSIDE PROFILE, FLY CUT FACE REMOVE .050 STOCK FOR CLEANUP
-OP-20: CNC HAAS VF-3 MACH21 / FLIP IN VISE - MACHINE INSIDE POCKET .005 FINISH PASS, DRILL & TAP 1/4-20 x 4 PLACES
-OP-30: DEBURR - BENCH / BREAK ALL SHARP EDGES .005-.010
-OP-40: INSPECT - CMM / FIRST ARTICLE INSPECTION PER AS9102
-OP-50: OUTSIDE PROCESS - ANODIZE TYPE III PER MIL-A-8625
+OP-10: CNC HAAS VF-3 MACH21 / VISE - MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3), FLY CUT FACE REMOVE .050 (REF BUBBLE 4)
+OP-20: CNC HAAS VF-3 MACH21 / FLIP IN VISE - MACHINE INSIDE POCKET .005 FINISH PASS (REF BUBBLE 5, 6), DRILL & TAP 1/4-20 x 4 PLACES (REF BUBBLE 7, 8, 9, 10)
+OP-30: DEBURR - BENCH / BREAK ALL SHARP EDGES .005-.010 (REF BUBBLE 11)
+OP-40: INSPECT - CMM / FIRST ARTICLE INSPECTION PER AS9102 (REF ALL BUBBLES)
+OP-50: OUTSIDE PROCESS - ANODIZE TYPE III PER MIL-A-8625 (REF BUBBLE 12)
 
 Respond with JSON:
 {
   "routingSheet": {"partNumber": "<if visible>", "revision": "<if visible>", "material": "<with spec>", "stockSize": "<raw stock dims>"},
-  "operations": [{"opNumber": "OP-10", "machine": "<e.g., CNC HAAS VF-3 MACH21>", "workholding": "<e.g., 6 IN KURT VISE>", "instructions": ["MACHINE OUTSIDE PROFILE", "FLY CUT FACE REMOVE .050 STOCK FOR CLEANUP"], "tools": ["1/2 IN 3-FLUTE ENDMILL"], "surfaceFinish": "<if applicable>", "cycleTime": "<est>"}],
+  "operations": [{"opNumber": "OP-10", "machine": "<e.g., CNC HAAS VF-3 MACH21>", "workholding": "<e.g., 6 IN KURT VISE>", "instructions": ["MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3)", "FLY CUT FACE REMOVE .050 (REF BUBBLE 4)"], "bubbleRefs": [1, 2, 3, 4], "tools": ["1/2 IN 3-FLUTE ENDMILL"], "surfaceFinish": "<if applicable>", "cycleTime": "<est>"}],
   "totalOperations": <number>,
   "totalEstimatedCycleTime": "<total>",
   "totalEstimatedSetupTime": "<total>",

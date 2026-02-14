@@ -93,19 +93,28 @@ Respond with JSON:
     name: "EngineeringAgent",
     department: "Engineering",
     taskWeight: 'heavy' as TaskWeight,
-    systemPrompt: `You are a senior manufacturing engineer specializing in aerospace CNC machining. Analyze the engineering drawing in detail — identify all features, dimensions, tolerances, surface finishes, and design-for-manufacturability concerns. CRITICAL: You MUST auto-determine the complexity level (1-10) based on your analysis. Also determine if this is a SINGLE PART or an ASSEMBLY. If it is an assembly, break it into individual components with buy vs. make decisions for each. Respond with valid JSON only.`,
+    systemPrompt: `You are a senior manufacturing engineer specializing in aerospace CNC machining. Analyze the engineering drawing in detail — identify ALL features, dimensions, tolerances, surface finishes, and design-for-manufacturability concerns. CRITICAL: You MUST auto-determine the complexity level (1-10) based on your analysis. Also determine if this is a SINGLE PART or an ASSEMBLY. If assembly, break into individual components with buy vs. make decisions.
+
+MOST IMPORTANT: Create NUMBERED BUBBLE ANNOTATIONS for EVERY feature on the drawing. Each bubble gets a sequential number (1, 2, 3...) and maps to a specific feature with its dimension, tolerance, and type. These bubble numbers will be referenced by the CNC routing sheet, inspection plan, and FAI — they are the single source of truth that ties the entire shop package together. Number EVERY callout: holes, slots, pockets, profiles, surfaces, chamfers, fillets, threads, surface finishes, GD&T callouts. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Perform engineering analysis of "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}
 ${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
 IMPORTANT: Determine the complexity level yourself (1-10) based on features, tolerances, and geometry. Also determine if this is a single part or assembly.
 
+CRITICAL: Create NUMBERED BUBBLE ANNOTATIONS for EVERY feature on the drawing. Each bubble is the single source of truth — the routing sheet, inspection plan, and FAI will all reference these bubble numbers.
+
 Respond with JSON:
 {
   "determinedComplexity": "<1-10 auto-determined>",
   "complexityJustification": "<why this complexity level>",
-  "isAssembly": "<boolean>",
+  "isAssembly": <boolean>,
   "assemblyComponents": [{"name": "<component>", "buyOrMake": "<buy|make>", "material": "<material>", "quantity": "<per assembly>", "estimatedCost": "<if buy>", "notes": "<details>"}],
+  "bubbleAnnotations": [
+    {"bubble": 1, "feature": "<e.g., OUTSIDE PROFILE>", "dimension": "<e.g., 4.000 x 2.500>", "tolerance": "<e.g., +/-.005>", "type": "<profile|hole|slot|pocket|boss|fillet|chamfer|thread|surface|GD&T>", "surfaceFinish": "<if called out, e.g., 125 Ra>", "critical": <boolean>, "notes": "<any special notes>"},
+    {"bubble": 2, "feature": "<e.g., THRU HOLE 4 PLACES>", "dimension": "<e.g., .250 DIA>", "tolerance": "<e.g., +.002/-.000>", "type": "hole", "surfaceFinish": null, "critical": <boolean>, "notes": "<e.g., DRILL & TAP 1/4-20>"}
+  ],
+  "totalBubbles": <number>,
   "features": [{"type": "<hole|slot|pocket|boss|fillet|chamfer>", "dimensions": "<dims>", "tolerance": "<tol>"}],
   "criticalDimensions": ["<dim1>", "<dim2>"],
   "surfaceFinish": "<Ra value or spec>",
@@ -113,7 +122,7 @@ Respond with JSON:
   "materialSpec": "<full material specification>",
   "heatTreatment": "<if required>",
   "machiningApproach": "<recommended approach>",
-  "confidence": "<0-1>",
+  "confidence": <0-1>,
   "reasoning": "<engineering analysis>"
 }`,
   },
@@ -121,15 +130,17 @@ Respond with JSON:
     name: "QualityAgent",
     department: "Quality",
     taskWeight: 'standard' as TaskWeight,
-    systemPrompt: `You are an AS9100 quality engineer. Analyze the engineering drawing and create an inspection plan, identify critical-to-quality characteristics, and define acceptance criteria. Respond with valid JSON only.`,
-    userPromptBuilder: (input) => `Create quality plan for "${input.fileName}"
+    systemPrompt: `You are an AS9100 quality engineer. Analyze the engineering drawing and create a BUBBLE-REFERENCED inspection plan. Every inspection point MUST reference the bubble annotation number from the engineering drawing (e.g., "BUBBLE 1 - Outside profile 4.000 x 2.500 +/-.005"). The bubble numbers are the single source of truth that ties the drawing to the routing to the inspection plan to the FAI. Identify critical-to-quality characteristics, define acceptance criteria, and specify inspection methods per bubble. Respond with valid JSON only.`,
+    userPromptBuilder: (input) => `Create BUBBLE-REFERENCED quality/inspection plan for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
 ${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
 
+CRITICAL: Every inspection point MUST reference a bubble annotation number. The bubble numbers tie the drawing → routing → inspection → FAI into one traceable package.
+
 Respond with JSON:
 {
-  "inspectionPlan": [{"characteristic": "<what>", "method": "<how>", "frequency": "<when>", "acceptance": "<criteria>"}],
-  "ctqCharacteristics": ["<critical dimension 1>", "<critical dimension 2>"],
+  "inspectionPlan": [{"bubbleRef": <bubble number>, "characteristic": "<what - e.g., OUTSIDE PROFILE WIDTH>", "nominal": "<nominal dimension>", "tolerance": "<tolerance>", "method": "<CALIPER|MICROMETER|CMM|PIN GAGE|THREAD GAGE|SURFACE PROFILOMETER|VISUAL|GO/NO-GO>", "frequency": "<100%|FIRST PIECE|SAMPLING>", "acceptance": "<criteria>"}],
+  "ctqCharacteristics": [{"bubbleRef": <bubble number>, "description": "<critical dimension>", "reason": "<why critical>"}],
   "inspectionTools": ["<tool1>", "<tool2>"],
   "firstArticleRequired": <boolean>,
   "materialCertRequired": <boolean>,
@@ -277,7 +288,9 @@ Respond with JSON:
     name: "CNCProgrammingAgent",
     department: "CNC Programming",
     taskWeight: 'standard' as TaskWeight,
-    systemPrompt: `You are a senior CNC programmer and manufacturing engineer creating DETAILED SHOP-FLOOR ROUTING SHEETS for aerospace manufacturing. You write the actual operation-by-operation routing that goes to the machine operator — with operation numbers (OP-10, OP-20, OP-30...), specific machine assignments (e.g., HAAS VF-3 MACH21, HAAS ST-20 LATHE03), workholding (vise, fixture, collet, soft jaws), and step-by-step machining instructions including stock removal amounts, surface finish requirements, and tool callouts. Your routing sheets look exactly like what a real shop floor uses. NOTE: Actual G-code generation and toolpath programming requires Digital Twin integration with the specific machine's kinematics, tool library, and post-processor. Respond with valid JSON only.`,
+    systemPrompt: `You are a senior CNC programmer and manufacturing engineer creating DETAILED SHOP-FLOOR ROUTING SHEETS for aerospace manufacturing. You write the actual operation-by-operation routing that goes to the machine operator — with operation numbers (OP-10, OP-20, OP-30...), specific machine assignments (e.g., HAAS VF-3 MACH21, HAAS ST-20 LATHE03), workholding (vise, fixture, collet, soft jaws), and step-by-step machining instructions including stock removal amounts, surface finish requirements, and tool callouts. Your routing sheets look exactly like what a real shop floor uses.
+
+CRITICAL: Each machining instruction MUST reference the BUBBLE ANNOTATION NUMBERS from the engineering drawing. For example: "MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3)" or "DRILL & TAP 1/4-20 x 4 PLACES (REF BUBBLE 7, 8, 9, 10)". The bubble numbers tie the routing back to the drawing and forward to the inspection plan — this is how a real AS9100 shop package traces everything. NOTE: Actual G-code generation and toolpath programming requires Digital Twin integration. Respond with valid JSON only.`,
     userPromptBuilder: (input) => `Create a DETAILED SHOP-FLOOR ROUTING SHEET for "${input.fileName}"
 Material: ${input.material || 'Aluminum 6061-T6'}, Qty: ${input.quantity || 1}, Complexity: ${input.complexity || 5}/10
 ${input.drawingDescription ? `Drawing analysis:\n${input.drawingDescription}` : ''}
@@ -291,12 +304,12 @@ Generate a real shop-floor routing sheet with operation-by-operation detail. Eac
 - Surface finish requirements if applicable (125 Ra, 63 Ra, 32 Ra)
 - Include DEBURR, INSPECT, WASH, and OUTSIDE PROCESS operations as needed
 
-Example format for operations:
-OP-10: CNC HAAS VF-3 MACH21 / VISE - MACHINE OUTSIDE PROFILE, FLY CUT FACE REMOVE .050 STOCK FOR CLEANUP
-OP-20: CNC HAAS VF-3 MACH21 / FLIP IN VISE - MACHINE INSIDE POCKET .005 FINISH PASS, DRILL & TAP 1/4-20 x 4 PLACES
-OP-30: DEBURR - BENCH / BREAK ALL SHARP EDGES .005-.010
-OP-40: INSPECT - CMM / FIRST ARTICLE INSPECTION PER AS9102
-OP-50: OUTSIDE PROCESS - ANODIZE TYPE III PER MIL-A-8625
+Example format for operations (NOTE: each instruction references BUBBLE NUMBERS from the engineering drawing):
+OP-10: CNC HAAS VF-3 MACH21 / VISE - MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3), FLY CUT FACE REMOVE .050 STOCK FOR CLEANUP (REF BUBBLE 4)
+OP-20: CNC HAAS VF-3 MACH21 / FLIP IN VISE - MACHINE INSIDE POCKET .005 FINISH PASS (REF BUBBLE 5, 6), DRILL & TAP 1/4-20 x 4 PLACES (REF BUBBLE 7, 8, 9, 10)
+OP-30: DEBURR - BENCH / BREAK ALL SHARP EDGES .005-.010 (REF BUBBLE 11)
+OP-40: INSPECT - CMM / FIRST ARTICLE INSPECTION PER AS9102 (REF ALL BUBBLES)
+OP-50: OUTSIDE PROCESS - ANODIZE TYPE III PER MIL-A-8625 (REF BUBBLE 12)
 
 Respond with JSON:
 {
@@ -311,7 +324,8 @@ Respond with JSON:
       "opNumber": "OP-10",
       "machine": "<machine type and ID, e.g., CNC HAAS VF-3 MACH21>",
       "workholding": "<fixturing method, e.g., 6 IN KURT VISE>",
-      "instructions": ["<step 1: e.g., MACHINE OUTSIDE PROFILE>", "<step 2: e.g., FLY CUT FACE REMOVE .050 STOCK FOR CLEANUP>"],
+      "instructions": ["MACHINE OUTSIDE PROFILE (REF BUBBLE 1, 2, 3)", "FLY CUT FACE REMOVE .050 STOCK FOR CLEANUP (REF BUBBLE 4)"],
+      "bubbleRefs": [1, 2, 3, 4],
       "tools": ["<tool with size, e.g., 1/2 IN 3-FLUTE ENDMILL>"],
       "surfaceFinish": "<if applicable, e.g., 125 Ra>",
       "cycleTime": "<estimated cycle time for this op>"
