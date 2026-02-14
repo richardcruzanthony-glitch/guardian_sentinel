@@ -21,11 +21,11 @@ export const SHOWCASE_PARTS: ShowcasePart[] = [
   {
     id: 'triple-clamp-bracket',
     name: 'Triple Clamp Bracket — Complex Model',
-    description: '5-axis CNC bracket with multiple bores, radii, and cross-sections. Requires 3+2 axis machining, tight tolerances, and multiple setups.',
+    description: '5-axis simultaneous CNC bracket mounted high on support stock. Features compound radii, precision bores, support material trimming at ±.005", and edge deburr. Full 5-axis workflow.',
     imageUrl: BRACKET_IMAGE,
     material: 'Aluminum 7075-T6',
     complexity: 'High — 5-Axis',
-    operations: 4,
+    operations: 5,
     result: {
       imageUrl: BRACKET_IMAGE,
       summary: {
@@ -35,7 +35,7 @@ export const SHOWCASE_PARTS: ShowcasePart[] = [
         leadTimeDays: 12,
         confidence: 94,
         processingTime: 3.2,
-        totalOperations: 4,
+        totalOperations: 5,
         complianceStatus: 'AS9100 Rev D Compliant',
       },
       drawingAnalysis: 'Complex triple-clamp bracket with 3D model reference. Overall envelope 200mm x 66mm x ~40mm. Features include: three precision bores (Ø50, Ø10.50, Ø8), multiple radii (R2, R4, R19, R20, R30, R33, R35), cross-hatched section views (Section A-A at 1:1.5 scale), Detail B (1:1.5) showing internal bore geometry with Ø24, Ø30 and 2x45° chamfers, Detail E (2:1.5) showing Ø22 bore with Ø14 counterbore and R33 blend. Title block indicates A3 sheet, Scale 1:2. Material not specified on drawing — defaulting to Aluminum 7075-T6 based on geometry and aerospace application. Part requires 3+2 axis machining minimum due to compound angles and undercut features visible in 3D model view.',

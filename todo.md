@@ -331,3 +331,10 @@
 - [x] Click a sample part → instantly shows full compliance package
 - [x] Keep upload feature available but secondary (dimmed when showcase selected)
 - [ ] Security messaging: "Secured instances available for ITAR/proprietary drawings"
+
+## Add Two More Showcase Parts
+- [ ] Upload bearing support bracket drawing to S3
+- [ ] Upload pillow block housing drawing to S3
+- [ ] Add pre-processed results for bearing support bracket
+- [ ] Add pre-processed results for pillow block housing
+- [ ] Gallery now shows 4 parts total
