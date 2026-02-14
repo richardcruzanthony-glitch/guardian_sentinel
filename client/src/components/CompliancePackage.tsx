@@ -588,24 +588,75 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
             </thead>
             <tbody>
               {Array.isArray(cncData.operations) && cncData.operations.length > 0 ? (
-                cncData.operations.map((op: any, i: number) => (
-                  <tr key={i}>
-                    <td className="border border-border p-2 font-bold text-green-400">{op.opNumber}</td>
-                    <td className="border border-border p-2 font-semibold">{op.machine}</td>
-                    <td className="border border-border p-2">{op.workholding}</td>
-                    <td className="border border-border p-2">
-                      <ul className="space-y-1">
-                        {Array.isArray(op.instructions) ? op.instructions.map((inst: string, j: number) => (
-                          <li key={j}>• {inst}</li>
-                        )) : <li>{op.instructions}</li>}
-                      </ul>
-                    </td>
-                    <td className="border border-border p-2 text-[10px]">
-                      {Array.isArray(op.tools) ? op.tools.join(', ') : (op.tools || '—')}
-                    </td>
-                    <td className="border border-border p-2 text-right">{op.cycleTime || '—'}</td>
-                  </tr>
-                ))
+                cncData.operations.map((op: any, i: number) => {
+                  const program = Array.isArray(cncData.programs) ? cncData.programs.find((p: any) => p.opNumber === op.opNumber) : null;
+                  const stageDraw = Array.isArray(cncData.stageDrawings) ? cncData.stageDrawings.find((s: any) => s.opNumber === op.opNumber) : null;
+                  return (
+                    <React.Fragment key={i}>
+                      <tr>
+                        <td className="border border-border p-2 font-bold text-green-400">
+                          {op.opNumber}
+                          {program && (
+                            <button
+                              onClick={() => setExpandedDoc(expandedDoc === `prog-${i}` ? null : `prog-${i}`)}
+                              className="block mt-1 text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                              title="Click to view HAAS G&M code"
+                            >
+                              {program.programNumber}
+                            </button>
+                          )}
+                        </td>
+                        <td className="border border-border p-2 font-semibold">{op.machine}</td>
+                        <td className="border border-border p-2">{op.workholding}</td>
+                        <td className="border border-border p-2">
+                          <ul className="space-y-1">
+                            {Array.isArray(op.instructions) ? op.instructions.map((inst: string, j: number) => (
+                              <li key={j}>• {inst}</li>
+                            )) : <li>{op.instructions}</li>}
+                          </ul>
+                        </td>
+                        <td className="border border-border p-2 text-[10px]">
+                          {Array.isArray(op.tools) ? op.tools.join(', ') : (op.tools || '—')}
+                        </td>
+                        <td className="border border-border p-2 text-right">{op.cycleTime || '—'}</td>
+                      </tr>
+                      {expandedDoc === `prog-${i}` && program && (
+                        <tr>
+                          <td colSpan={6} className="border border-border p-0">
+                            <div className="bg-gray-900 p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-cyan-400 font-bold text-[11px]">{program.programNumber} — {program.machine} — HAAS G&M CODE</p>
+                                <span className="text-[9px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DEFAULT HAAS FORMAT</span>
+                              </div>
+                              <pre className="text-green-300 text-[10px] leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto">{program.gcode}</pre>
+                              <p className="text-amber-400/70 text-[9px] mt-2 italic">Customer-specific post-processor (Mazak, Okuma, Fanuc, DMG MORI) adjusted on onboarding.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      {stageDraw && (
+                        <tr>
+                          <td colSpan={6} className="border border-border p-0">
+                            <div className="bg-muted/20 p-3 border-t border-dashed border-border">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">STAGE DRAWING — {stageDraw.opNumber}</p>
+                              <p className="text-[11px] text-foreground/80">{stageDraw.description}</p>
+                              <div className="flex gap-4 mt-2">
+                                <div>
+                                  <p className="text-[9px] text-muted-foreground uppercase">Machined Features</p>
+                                  <p className="text-[10px]">{Array.isArray(stageDraw.machinedFeatures) ? stageDraw.machinedFeatures.join(', ') : '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[9px] text-muted-foreground uppercase">Remaining Stock</p>
+                                  <p className="text-[10px]">{stageDraw.remainingStock || '—'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               ) : (
                 <tr>
                   <td className="border border-border p-2" colSpan={6}>

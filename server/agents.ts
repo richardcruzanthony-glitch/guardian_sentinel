@@ -336,7 +336,23 @@ Respond with JSON:
   "totalEstimatedSetupTime": "<total setup time all ops>",
   "machinesRequired": ["<list of unique machines needed>"],
   "criticalFeatures": ["<features requiring special attention>"],
-  "digitalTwinNote": "Actual G-code generation, toolpath programming, and collision detection require Digital Twin integration with specific machine kinematics, tool library, and post-processor.",
+  "programs": [
+    {
+      "programNumber": "O0001",
+      "opNumber": "OP-10",
+      "machine": "HAAS VF-3",
+      "gcode": "O0001 (PART NAME - OP-10 OUTSIDE PROFILE)\n(HAAS VF-3 / T01 1/2 3FL EM)\nG90 G54 G17\nG28 G91 Z0.\nT01 M06 (1/2 3-FLUTE ENDMILL)\nS8000 M03\nG43 H01 Z1.0\nG00 X-1.0 Y-1.0\nZ0.1\nG01 Z-0.25 F15.0\nG41 D01 X0. Y0. F40.0\n(MACHINE OUTSIDE PROFILE)\nG01 X4.0 Y0.\nG01 X4.0 Y3.0\nG01 X0. Y3.0\nG01 X0. Y0.\nG40 X-1.0 Y-1.0\nG00 Z1.0\nM09\nG28 G91 Z0.\nM30\n%"
+    }
+  ],
+  "stageDrawings": [
+    {
+      "opNumber": "OP-10",
+      "description": "<detailed description of what the part looks like after this operation: what features are machined, what is still raw stock, how it is fixtured, key dimensions visible>",
+      "machinedFeatures": ["<feature1 completed>", "<feature2 completed>"],
+      "remainingStock": "<what still needs to be machined in later ops>"
+    }
+  ],
+  "digitalTwinNote": "Default HAAS G&M code format. Customer-specific post-processor adjustment (Mazak, Okuma, Fanuc, DMG MORI) available on onboarding. Full collision detection and toolpath optimization require Digital Twin integration.",
   "confidence": <0-1>,
   "reasoning": "<routing strategy rationale>"
 }`,

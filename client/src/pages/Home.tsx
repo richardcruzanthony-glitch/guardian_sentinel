@@ -9,6 +9,7 @@ import { AgentVisualization, type AgentStatus } from "@/components/AgentVisualiz
 import { CompliancePackage } from "@/components/CompliancePackage";
 import { runHybridProcessing, type AgentResult, type HybridProcessingResult } from "@/lib/hybridOrchestrator";
 import { DemoRequestModal, EarlyAccessModal, ContactSection } from "@/components/LeadCapture";
+import { DigitalTwin } from "@/components/DigitalTwin";
 import { Rocket } from 'lucide-react';
 
 type Domain = 'manufacturing' | 'defense' | 'medical' | 'legal';
@@ -1342,6 +1343,13 @@ export default function Home() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* Digital Twin — Manufacturing Only */}
+        {domain === 'manufacturing' && (
+          <section>
+            <DigitalTwin />
+          </section>
         )}
 
         {/* CTA Section */}

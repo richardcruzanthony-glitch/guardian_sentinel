@@ -234,3 +234,36 @@
 - [x] Add Routing Sheet document to CompliancePackage with OP-level detail and bubble references
 - [x] Add Bubble Annotation Map document to CompliancePackage (bubble number → feature → tolerance → inspection method)
 - [x] Cross-link routing, bubbles, and inspection into unified shop package
+
+## Clickable G-Code Programs in Routing
+- [x] Add HAAS G&M code generation to CNC Programming Agent output
+- [x] Make program numbers clickable in routing sheet (O0001, O0002, etc.)
+- [x] Clicking program number expands to show full HAAS G-code for that operation
+- [x] Default to HAAS format, note customer-specific post-processor adjustment on onboarding
+
+## Digital Twin Shop Floor Layout
+- [x] Create ShopFloor page with visual layout of the shop
+- [x] 20 CNC mills (HAAS VF-series) with machine IDs
+- [x] 5 CNC lathes (HAAS ST-series) with machine IDs
+- [x] Tooling area / tool crib
+- [x] Task / deburr station
+- [x] Engineering office
+- [x] Assembly area
+- [x] Quality / inspection area
+- [x] Sales office
+- [x] Compliance office
+- [x] Shipping dock
+- [x] Receiving dock
+- [x] Outside processes staging area
+- [x] Manager board view showing job status across machines
+- [x] Embedded in Manufacturing domain on Home page (no separate route needed)
+
+## Demo Video
+- [ ] Create short walkthrough video covering all functions
+- [ ] Show manager board and Digital Twin shop layout
+- [ ] Demonstrate end-to-end manufacturing processing flow
+
+## Stage Drawings Per Operation
+- [x] CNC Programming Agent outputs stage drawing description per operation (what's machined, what's stock, workholding)
+- [ ] Generate visual stage drawings using image generation for each operation (requires Digital Twin)
+- [x] Display stage drawing descriptions in routing sheet below each operation

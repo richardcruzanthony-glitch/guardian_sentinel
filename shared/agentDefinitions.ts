@@ -281,7 +281,23 @@ Respond with JSON:
   "totalEstimatedSetupTime": "<total>",
   "machinesRequired": ["<unique machines>"],
   "criticalFeatures": ["<special attention>"],
-  "digitalTwinNote": "Actual G-code generation, toolpath programming, and collision detection require Digital Twin integration with specific machine kinematics, tool library, and post-processor.",
+  "programs": [
+    {
+      "programNumber": "O0001",
+      "opNumber": "OP-10",
+      "machine": "HAAS VF-3",
+      "gcode": "O0001 (PART NAME - OP-10)\nG90 G54 G17\nG28 G91 Z0.\nT01 M06\nS8000 M03\nG43 H01 Z1.0\n..."
+    }
+  ],
+  "stageDrawings": [
+    {
+      "opNumber": "OP-10",
+      "description": "<what the part looks like after this op: machined features, remaining stock, fixturing>",
+      "machinedFeatures": ["<completed features>"],
+      "remainingStock": "<what still needs machining>"
+    }
+  ],
+  "digitalTwinNote": "Default HAAS G&M code format. Customer-specific post-processor (Mazak, Okuma, Fanuc, DMG MORI) on onboarding. Full collision detection requires Digital Twin.",
   "confidence": <0-1>,
   "reasoning": "<routing rationale>"
 }`,
