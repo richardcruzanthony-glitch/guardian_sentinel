@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, manufacturingQuotes, learningMetrics, agentLogs, compliancePackages, leads } from "../drizzle/schema";
+import { InsertUser, users, manufacturingQuotes, learningMetrics, agentLogs, compliancePackages, leads, visitorMessages } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -260,6 +260,38 @@ export async function getLeads() {
     return result;
   } catch (error) {
     console.error("[Database] Failed to get leads:", error);
+    return [];
+  }
+}
+
+export async function saveVisitorMessage(msg: typeof visitorMessages.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save visitor message: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(visitorMessages).values(msg);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to save visitor message:", error);
+    throw error;
+  }
+}
+
+export async function getVisitorMessages() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get visitor messages: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(visitorMessages);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get visitor messages:", error);
     return [];
   }
 }

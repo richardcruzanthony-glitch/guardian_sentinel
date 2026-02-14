@@ -314,3 +314,12 @@
 - [x] Pass imageUrl through HybridProcessingResult to CompliancePackage
 - [x] Compute cumulative bubbleRefs per operation for progressive tracking
 - [x] Cross-reference Engineering Agent bubbleAnnotations with CNC Agent bubbleRefs stock
+
+## Visitor Chat Widget & Notifications
+- [x] Add visitor_messages table to schema (name, email, message, timestamp)
+- [x] Add tRPC endpoint for submitting chat messages
+- [x] Build floating chat widget (bottom-right corner)
+- [x] Chat widget allows name + message without requiring login
+- [x] Wire up owner notification on new lead submission (demo + early access)
+- [x] Wire up owner notification on new chat message
+- [x] Instant push notification to owner with visitor name, email, message

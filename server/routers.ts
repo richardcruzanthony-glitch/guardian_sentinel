@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { runAllAgents, getAgentsForDomain } from "./agents";
 import { generateImage } from "./_core/imageGeneration";
-import { saveManufacturingQuote, getManufacturingQuotes, saveLearningMetric, getLearningMetrics, saveAgentLog, getAgentLogs, saveCompliancePackage, getCompliancePackages, saveLead, getLeads } from "./db";
+import { saveManufacturingQuote, getManufacturingQuotes, saveLearningMetric, getLearningMetrics, saveAgentLog, getAgentLogs, saveCompliancePackage, getCompliancePackages, saveLead, getLeads, saveVisitorMessage, getVisitorMessages } from "./db";
 import { storagePut } from "./storage";
 import { notifyOwner } from "./_core/notification";
 
@@ -279,6 +279,42 @@ Style: Technical engineering illustration, dark navy/black background, parts sho
         } catch (error) {
           console.error('Early access error:', error);
           throw new Error('Failed to submit early access request');
+        }
+      }),
+  }),
+
+  // Visitor Chat — Questions & Comments
+  chat: router({
+    sendMessage: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        email: z.string().email().optional(),
+        message: z.string().min(1),
+        page: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          await saveVisitorMessage({
+            visitorName: input.name,
+            visitorEmail: input.email || null,
+            message: input.message,
+            page: input.page || null,
+          });
+
+          // Notify owner immediately
+          try {
+            await notifyOwner({
+              title: '\u{1F4AC} New Visitor Message — Guardian OS',
+              content: `From: ${input.name}${input.email ? ` (${input.email})` : ''}\nPage: ${input.page || 'Unknown'}\n\nMessage:\n${input.message}`,
+            });
+          } catch (e) {
+            console.warn('Chat notification failed:', e);
+          }
+
+          return { success: true };
+        } catch (error) {
+          console.error('Chat message error:', error);
+          throw new Error('Failed to send message');
         }
       }),
   }),

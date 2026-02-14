@@ -110,3 +110,20 @@ export const leads = mysqlTable("leads", {
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
+
+/**
+ * Visitor chat messages — questions and comments from site visitors
+ */
+export const visitorMessages = mysqlTable("visitor_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorName: varchar("visitorName", { length: 255 }).notNull(),
+  visitorEmail: varchar("visitorEmail", { length: 320 }),
+  message: text("message").notNull(),
+  page: varchar("page", { length: 100 }),
+  status: mysqlEnum("status", ["new", "read", "replied"]).default("new").notNull(),
+  reply: text("reply"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type VisitorMessage = typeof visitorMessages.$inferSelect;
+export type InsertVisitorMessage = typeof visitorMessages.$inferInsert;
