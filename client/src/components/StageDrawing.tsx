@@ -134,6 +134,12 @@ export function StageDrawingFull({
 
         {/* RIGHT: Bubble annotation breakdown + operation details */}
         <div className="flex-1 space-y-3 min-w-0">
+          {/* Clamping Position — Part C Drawing */}
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2.5">
+            <p className="text-[9px] text-blue-400 uppercase tracking-wider font-bold mb-1.5">Part C — Clamping Position</p>
+            <p className="text-[10px] text-foreground/80 leading-relaxed">{fixturing || 'Workholding setup for this operation'}</p>
+          </div>
+
           {/* Description */}
           <p className="text-[11px] text-foreground/80 leading-relaxed">{description}</p>
 
