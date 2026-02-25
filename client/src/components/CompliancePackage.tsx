@@ -808,7 +808,6 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
         </div>
       ),
     },
-,
     ...(result.summary?.isAssembly && result.summary?.bomComponents ? [{
       id: 'bom',
       title: 'Bill of Materials (BOM)',
@@ -846,8 +845,7 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
         </div>
       ),
     }] : []),
-
-    ];
+  ];
 
   return (
     <Card className="border-border bg-card/50 backdrop-blur-sm">
