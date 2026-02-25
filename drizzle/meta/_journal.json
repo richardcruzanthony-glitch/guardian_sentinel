@@ -36,6 +36,13 @@
       "when": 1771050921857,
       "tag": "0004_wise_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772008468978,
+      "tag": "0005_motionless_king_cobra",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, manufacturingQuotes, learningMetrics, agentLogs, compliancePackages, leads, visitorMessages } from "../drizzle/schema";
+import { InsertUser, users, manufacturingQuotes, learningMetrics, agentLogs, compliancePackages, leads, visitorMessages, licenseLeads, licensingTiers } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -292,6 +292,56 @@ export async function getVisitorMessages() {
     return result;
   } catch (error) {
     console.error("[Database] Failed to get visitor messages:", error);
+    return [];
+  }
+}
+
+// Licensing functions
+
+export async function saveLicenseLead(lead: typeof licenseLeads.$inferInsert) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save license lead: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(licenseLeads).values(lead);
+    return result[0]?.insertId || 0;
+  } catch (error) {
+    console.error("[Database] Failed to save license lead:", error);
+    throw error;
+  }
+}
+
+export async function getLicenseLeads() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get license leads: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(licenseLeads);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get license leads:", error);
+    return [];
+  }
+}
+
+export async function getLicensingTiers() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get licensing tiers: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(licensingTiers);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get licensing tiers:", error);
     return [];
   }
 }

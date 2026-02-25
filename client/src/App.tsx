@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import ShopFloor from "./pages/ShopFloor";
 import { ChatWidget } from "./components/ChatWidget";
+import { AISalesAgent } from "./components/AISalesAgent";
 
 function Router() {
   return (
@@ -33,6 +34,7 @@ function App() {
           <Toaster />
           <Router />
           <ChatWidget />
+          <AISalesAgent />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

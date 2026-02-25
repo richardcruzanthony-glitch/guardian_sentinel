@@ -362,7 +362,172 @@ Style: Technical engineering illustration, dark navy/black background, parts sho
           return [];
         }
       }),
+   }),
+
+  // Sales & Licensing
+  sales: router({
+    /**
+     * Get AI sales response for licensing inquiry
+     */
+    getSalesResponse: publicProcedure
+      .input(z.object({
+        userMessage: z.string(),
+        conversationHistory: z.array(z.object({
+          role: z.enum(['user', 'agent']),
+          content: z.string(),
+        })).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const { invokeLLM } = await import('./_core/llm');
+          
+          const systemPrompt = `You are the Guardian OS Sales Agent. Your role is to:
+1. Help prospects understand Guardian OS licensing tiers (Starter, Professional, Enterprise)
+2. Answer questions about features, pricing, and deployment across Manufacturing and Legal domains
+3. Identify sales opportunities and capture lead information
+4. Be friendly, professional, and solution-focused
+
+Guardian OS Domains:
+- MANUFACTURING: Automates RFQ, routing, compliance (AS9100, FAI, inspection), G-code generation, procurement
+- LEGAL: Automates contract review, compliance tracking, risk assessment, document management
+
+Licensing Tiers:
+- Starter: $299/month - Up to 5 users, basic support, core features for 1 domain
+- Professional: $999/month - Up to 20 users, priority support, advanced features for both domains
+- Enterprise: Custom pricing - Unlimited users, dedicated support, custom integration, on-premise deployment
+
+When you identify a prospect interested in purchasing, extract their name, email, company, industry, and which domains they're interested in.`;
+
+          const messages = [
+            { role: 'system' as const, content: systemPrompt },
+            ...(input.conversationHistory || []),
+            { role: 'user' as const, content: input.userMessage },
+          ];
+
+          const response = await invokeLLM({
+            messages: messages as any,
+          });
+
+          const message = typeof response.choices[0].message.content === 'string' 
+            ? response.choices[0].message.content 
+            : 'Thank you for your interest in Guardian OS. How can I help you today?';
+
+          // Lead detection: look for intent to purchase or demo
+          const isLead = /email|contact|pricing|demo|trial|purchase|buy|license|interested|manufacturing|legal|contract|compliance|riskmanagement/i.test(input.userMessage);
+          
+          // Extract domain interest
+          const manufacturingInterest = /manufacturing|rfc|routing|compliance|as9100|fai|inspection|gcode|procurement/i.test(input.userMessage);
+          const legalInterest = /legal|contract|review|compliance|risk|document|management/i.test(input.userMessage);
+          
+          return {
+            message,
+            isLead,
+            leadInfo: isLead ? {
+              name: 'Prospect',
+              email: '',
+              company: '',
+              industry: '',
+              tiersInterested: [],
+            } : undefined,
+          };
+        } catch (error) {
+          console.error('Sales response error:', error);
+          return {
+            message: 'I apologize for the technical difficulty. Please contact our sales team at sales@guardiansentinel.io',
+            isLead: false,
+          };
+        }
+      }),
+
+    /**
+     * Create a license lead from sales inquiry
+     */
+    createLicenseLead: publicProcedure
+      .input(z.object({
+        name: z.string(),
+        email: z.string().email(),
+        company: z.string().optional(),
+        industry: z.string().optional(),
+        tiersInterested: z.array(z.string()).optional(),
+        message: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const { saveLicenseLead } = await import('./db');
+          
+          const leadId = await saveLicenseLead({
+            name: input.name,
+            email: input.email,
+            company: input.company,
+            industry: input.industry,
+            tiersInterested: input.tiersInterested,
+            message: input.message,
+          });
+
+          // Notify owner of new lead
+          await notifyOwner({
+            title: '🎯 New License Lead',
+            content: `${input.name} from ${input.company || 'Unknown'} is interested in ${input.tiersInterested?.join(', ') || 'Guardian OS licensing'}. Email: ${input.email}`,
+          });
+
+          return { success: true, leadId };
+        } catch (error) {
+          console.error('Create license lead error:', error);
+          throw new Error('Failed to create license lead');
+        }
+      }),
+
+    /**
+     * Get available licensing tiers
+     */
+    getLicensingTiers: publicProcedure.query(async () => {
+      try {
+        const { getLicensingTiers: getTiers } = await import('./db');
+        
+        const tiers = await getTiers();
+        return tiers;
+      } catch (error) {
+        console.error('Get licensing tiers error:', error);
+        return [
+          {
+            id: 1,
+            name: 'Starter',
+            monthlyPrice: 29900,
+            annualPrice: 299900,
+            features: ['Core Guardian OS features', 'Up to 5 users', 'Email support', 'Basic integrations'],
+            maxUsers: 5,
+            maxProjects: null,
+            supportLevel: 'email',
+            description: 'Perfect for small teams getting started with Guardian OS',
+            createdAt: new Date(),
+          },
+          {
+            id: 2,
+            name: 'Professional',
+            monthlyPrice: 99900,
+            annualPrice: 999900,
+            features: ['All Starter features', 'Up to 20 users', 'Priority support', 'Advanced integrations', 'Custom workflows'],
+            maxUsers: 20,
+            maxProjects: null,
+            supportLevel: 'priority',
+            description: 'For growing teams with advanced manufacturing needs',
+            createdAt: new Date(),
+          },
+          {
+            id: 3,
+            name: 'Enterprise',
+            monthlyPrice: 0,
+            annualPrice: 0,
+            features: ['All Professional features', 'Unlimited users', 'Dedicated support', 'Custom integration', 'On-premise deployment', 'SLA guarantee'],
+            maxUsers: null,
+            maxProjects: null,
+            supportLevel: 'dedicated',
+            description: 'For large enterprises with custom requirements',
+            createdAt: new Date(),
+          },
+        ];
+      }
+    }),
   }),
 });
-
 export type AppRouter = typeof appRouter;

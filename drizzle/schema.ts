@@ -127,3 +127,61 @@ export const visitorMessages = mysqlTable("visitor_messages", {
 
 export type VisitorMessage = typeof visitorMessages.$inferSelect;
 export type InsertVisitorMessage = typeof visitorMessages.$inferInsert;
+
+/**
+ * Licensing tiers and pricing
+ */
+export const licensingTiers = mysqlTable("licensing_tiers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 50 }).notNull(), // Starter, Professional, Enterprise
+  monthlyPrice: int("monthlyPrice").notNull(), // in cents
+  annualPrice: int("annualPrice").notNull(), // in cents
+  features: json("features").notNull(), // array of feature strings
+  maxUsers: int("maxUsers"), // null = unlimited
+  maxProjects: int("maxProjects"), // null = unlimited
+  supportLevel: varchar("supportLevel", { length: 50 }).notNull(), // email, priority, dedicated
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LicensingTier = typeof licensingTiers.$inferSelect;
+export type InsertLicensingTier = typeof licensingTiers.$inferInsert;
+
+/**
+ * License keys and activations
+ */
+export const licenseKeys = mysqlTable("license_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  licenseKey: varchar("licenseKey", { length: 64 }).notNull().unique(), // XXXX-XXXX-XXXX-XXXX format
+  tierId: int("tierId").notNull(),
+  userId: int("userId"), // null until activated
+  companyName: varchar("companyName", { length: 255 }),
+  email: varchar("email", { length: 320 }),
+  status: mysqlEnum("status", ["generated", "activated", "expired", "revoked"]).default("generated").notNull(),
+  activatedAt: timestamp("activatedAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LicenseKey = typeof licenseKeys.$inferSelect;
+export type InsertLicenseKey = typeof licenseKeys.$inferInsert;
+
+/**
+ * License sales leads and inquiries
+ */
+export const licenseLeads = mysqlTable("license_leads", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  company: varchar("company", { length: 255 }),
+  industry: varchar("industry", { length: 100 }),
+  tiersInterested: json("tiersInterested"), // array of tier names
+  message: text("message"),
+  status: mysqlEnum("status", ["new", "contacted", "quoted", "converted", "lost"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LicenseLead = typeof licenseLeads.$inferSelect;
+export type InsertLicenseLead = typeof licenseLeads.$inferInsert;
