@@ -117,13 +117,19 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
             </div>
             <div>
               <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Part / Drawing</p>
-              <p>{result.fileName}</p>
+              <p>{result.fileName || result.summary?.partName || 'PART-001'}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Material</p>
-              <p>{salesData.materialCallout || engData.recommendedMaterial || 'Aluminum 6061-T6'}</p>
+              <p>{result.summary?.material || salesData.materialCallout || engData.recommendedMaterial || 'Aluminum 6061-T6'}</p>
             </div>
           </div>
+          {result.drawingAnalysis && (
+            <div className="bg-card/50 border border-border rounded p-3">
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-2">Drawing Analysis</p>
+              <p className="text-[10px] leading-relaxed">{result.drawingAnalysis}</p>
+            </div>
+          )}
           <table className="w-full border border-border text-[11px]">
             <thead>
               <tr className="bg-card">
@@ -132,12 +138,12 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
               </tr>
             </thead>
             <tbody>
-              <tr><td className="border border-border p-2">Material Cost</td><td className="border border-border p-2 text-right">${((salesData.quotedPrice || 0) * 0.3).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Labor Cost</td><td className="border border-border p-2 text-right">${((salesData.quotedPrice || 0) * 0.4).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Overhead</td><td className="border border-border p-2 text-right">${((salesData.quotedPrice || 0) * 0.15).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Quality / Compliance</td><td className="border border-border p-2 text-right">${((salesData.quotedPrice || 0) * 0.1).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Shipping & Packaging</td><td className="border border-border p-2 text-right">${((salesData.quotedPrice || 0) * 0.05).toFixed(2)}</td></tr>
-              <tr className="font-bold bg-accent/10"><td className="border border-border p-2">TOTAL QUOTED PRICE</td><td className="border border-border p-2 text-right text-accent">${(salesData.quotedPrice || 0).toLocaleString()}</td></tr>
+              <tr><td className="border border-border p-2">Material Cost</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.3).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Labor Cost</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.4).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Overhead</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.15).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Quality / Compliance</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.1).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Shipping & Packaging</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.05).toFixed(2)}</td></tr>
+              <tr className="font-bold bg-accent/10"><td className="border border-border p-2">TOTAL QUOTED PRICE</td><td className="border border-border p-2 text-right text-accent">${(result.summary?.totalPrice || salesData.quotedPrice || 0).toLocaleString()}</td></tr>
             </tbody>
           </table>
           <div>
@@ -173,6 +179,7 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
             </thead>
             <tbody>
               {(mfgData.operations || mfgData.machiningOperations || [
+                { operation: 'Material Procurement & Inspection', machine: 'Receiving', setupTime: 0, cycleTime: 0 },
                 { operation: 'Raw Stock Prep', machine: 'Band Saw', setupTime: 15, cycleTime: 5 },
                 { operation: 'CNC Mill Op 1 — Profile', machine: '3-Axis VMC', setupTime: 45, cycleTime: 30 },
                 { operation: 'CNC Mill Op 2 — Features', machine: '3-Axis VMC', setupTime: 30, cycleTime: 25 },
@@ -853,7 +860,52 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
         </div>
       ),
     },
-    ...(result.summary?.isAssembly && result.summary?.bomComponents ? [{
+    {
+      id: 'programming',
+      title: 'CNC Programming & G-Code',
+      icon: <Code2 className="w-5 h-5 text-blue-400" />,
+      content: (
+        <div className="font-mono text-xs space-y-4 text-foreground/90">
+          <div className="border-b border-border pb-3">
+            <p className="text-lg font-bold text-blue-400">CNC PROGRAMMING</p>
+            <p className="text-muted-foreground">HAAS G-Code Programs - One per Operation</p>
+          </div>
+          {Array.isArray(cncData.programs) && cncData.programs.length > 0 ? (
+            cncData.programs.map((prog: any, i: number) => (
+              <div key={i} className="border border-border rounded">
+                <button
+                  onClick={() => setExpandedProgram(expandedProgram === `prog-detail-${i}` ? null : `prog-detail-${i}`)}
+                  className="w-full p-3 bg-blue-500/10 hover:bg-blue-500/20 flex items-center justify-between cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Code2 className="w-4 h-4 text-blue-400" />
+                    <span className="font-bold text-blue-400">{prog.programNumber || `O${String(i + 1).padStart(4, '0')}`}</span>
+                    <span className="text-muted-foreground text-[10px]">{prog.opNumber} - {prog.machine}</span>
+                  </div>
+                  {expandedProgram === `prog-detail-${i}` ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {expandedProgram === `prog-detail-${i}` && (
+                  <div className="p-3 bg-card/50 border-t border-border">
+                    <pre className="text-[9px] overflow-x-auto whitespace-pre-wrap break-words bg-background/50 p-2 rounded border border-border/50">
+                      {prog.gcode || `${prog.programNumber || `O${String(i + 1).padStart(4, '0')}`}\n(${prog.machine} - ${prog.opNumber})\nG90 G54 G17\nG28 G91 Z0.\n(PROGRAM CONTENT)\nM30\n%`}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3">
+              <p className="text-blue-400">No programs generated. G-code generation requires Digital Twin integration.</p>
+            </div>
+          )}
+          <div>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-2">Programming Notes</p>
+            <p>{cncData.programmingNotes || 'All programs post-processed for HAAS VF-3 / UMC-750 machines. Tool offsets managed via machine library. Collision detection performed in Digital Twin before shop-floor execution.'}</p>
+          </div>
+        </div>
+      ),
+    },
+        ...(result.summary?.isAssembly && result.summary?.bomComponents ? [{
       id: 'bom',
       title: 'Bill of Materials (BOM)',
       icon: <Package className="w-5 h-5 text-blue-400" />,
