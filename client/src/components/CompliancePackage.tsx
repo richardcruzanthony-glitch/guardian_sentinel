@@ -454,6 +454,51 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
       ),
     },
     {
+      id: 'procurement',
+      title: 'Procurement & Material Sourcing',
+      icon: <Package className="w-5 h-5 text-purple-400" />,
+      content: (
+        <div className="font-mono text-xs space-y-4 text-foreground/90">
+          <div className="border-b border-border pb-3">
+            <p className="text-lg font-bold text-purple-400">PROCUREMENT & MATERIAL SOURCING</p>
+            <p className="text-muted-foreground">Material Requirements & Supplier Information</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Material Required</p>
+              <p className="font-semibold">{procurementData.materialRequired || 'Per drawing specifications'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Est. Material Cost</p>
+              <p className="font-semibold text-purple-400">${(procurementData.estimatedMaterialCost || 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Vendor Recommendation</p>
+              <p>{procurementData.vendorRecommendation || 'Standard industrial suppliers'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Lead Time</p>
+              <p>{procurementData.leadTime || '1-2 weeks from stock'}</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-2">Certification Requirements</p>
+            <p>{procurementData.certRequired || 'Material certification per ASTM B221 (aluminum) or equivalent'}</p>
+          </div>
+          {procurementData.toolingRequired && (
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-2">Tooling Required</p>
+              <p>{Array.isArray(procurementData.toolingRequired) ? procurementData.toolingRequired.join(', ') : procurementData.toolingRequired}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-2">Sourcing Strategy</p>
+            <p>{procurementData.reasoning || 'Material sourced from approved suppliers on Approved Supplier List per AS9100 Rev D. All material certifications verified upon receipt.'}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
       id: 'outside-processes',
       title: 'Outside Processes PO Requirements',
       icon: <ExternalLink className="w-5 h-5 text-orange-400" />,
