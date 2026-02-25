@@ -808,7 +808,46 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
         </div>
       ),
     },
-  ];
+,
+    ...(result.summary?.isAssembly && result.summary?.bomComponents ? [{
+      id: 'bom',
+      title: 'Bill of Materials (BOM)',
+      icon: <Package className="w-5 h-5 text-blue-400" />,
+      content: (
+        <div className="font-mono text-xs space-y-4 text-foreground/90">
+          <div className="border-b border-border pb-3">
+            <p className="text-lg font-bold text-blue-400">BILL OF MATERIALS</p>
+            <p className="text-muted-foreground">{result.summary?.partName || 'Assembly'}</p>
+          </div>
+          <table className="w-full border border-border text-[11px]">
+            <thead>
+              <tr className="bg-card">
+                <th className="border border-border p-2 text-left">Part #</th>
+                <th className="border border-border p-2 text-left">Description</th>
+                <th className="border border-border p-2 text-left">Material</th>
+                <th className="border border-border p-2 text-center">Qty</th>
+                <th className="border border-border p-2 text-left">Operation</th>
+                <th className="border border-border p-2 text-left">Lead Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.summary?.bomComponents?.map((comp: any, i: number) => (
+                <tr key={i}>
+                  <td className="border border-border p-2">{comp.partNumber}</td>
+                  <td className="border border-border p-2">{comp.description}</td>
+                  <td className="border border-border p-2">{comp.material}</td>
+                  <td className="border border-border p-2 text-center">{comp.quantity}</td>
+                  <td className="border border-border p-2">{comp.operation}</td>
+                  <td className="border border-border p-2">{comp.leadTime}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ),
+    }] : []),
+
+    ];
 
   return (
     <Card className="border-border bg-card/50 backdrop-blur-sm">
