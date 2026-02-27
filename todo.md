@@ -33,3 +33,10 @@
 - [x] Create licensing comparison page with value propositions
 - [x] Add tier-specific features and unlock capabilities
 - [x] Test licensing flow end-to-end
+
+## Routing & Pricing Fixes (URGENT)
+- [x] Complete shop floor routing with all operations (added OP-50 support trim, OP-60 manual deburr)
+- [x] Add assembly operation to routing sheet (OP-60 assembly for machinist's jack)
+- [x] Add outside processing cost to final pricing calculation (anodize cost $75 now included)
+- [x] Verify pricing includes all cost components
+- [x] Test routing sheet end-to-end
