@@ -264,7 +264,7 @@ export const SHOWCASE_PARTS: ShowcasePart[] = [
       summary: {
         partName: "Machinist's Jack Assembly — 6 Components",
         material: 'Steel AISI 1020',
-        estimatedCost: 320,
+        estimatedCost: 640,
         leadTimeDays: 8,
         confidence: 96,
         processingTime: 2.8,
