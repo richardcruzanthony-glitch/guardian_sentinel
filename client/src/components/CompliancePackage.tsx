@@ -35,7 +35,7 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
   const shippingData = agents.find((a: any) => a.agentName === 'ShippingAgent')?.data || {};
   const auditData = agents.find((a: any) => a.agentName === 'AuditAgent')?.data || {};
   const outsideProcessesData = agents.find((a: any) => a.agentName === 'OutsideProcessesAgent')?.data || {};
-  const rawCncData = agents.find((a: any) => a.agentName === 'CNCProgrammingAgent')?.data || {};
+  const rawCncData = agents.find((a: any) => a.agentName === 'CNCProgrammingAgent' || a.agentName === 'CNC Programming Agent')?.data || {};
 
   // Ensure every CNC operation has a program and every operation has a stage drawing
   const cncData = useMemo(() => {
@@ -147,7 +147,7 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
               <tr><td className="border border-border p-2">Quality / Compliance</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.1).toFixed(2)}</td></tr>
               <tr><td className="border border-border p-2">Outside Processing (Anodize)</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.outsideProcessCost || 75).toFixed(2)}</td></tr>
               <tr><td className="border border-border p-2">Shipping & Packaging</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.05).toFixed(2)}</td></tr>
-              <tr className="font-bold bg-accent/10"><td className="border border-border p-2">TOTAL QUOTED PRICE</td><td className="border border-border p-2 text-right text-accent">${((result.summary?.totalPrice || salesData.quotedPrice || 0) + (salesData.quoteBreakdown?.outsideProcessCost || 75)).toFixed(2)}</td></tr>
+              <tr className="font-bold bg-accent/10"><td className="border border-border p-2">TOTAL QUOTED PRICE (incl. Outside Processing)</td><td className="border border-border p-2 text-right text-accent">${((result.summary?.totalPrice || salesData.quotedPrice || 0) + (outsideProcessesData.totalOutsideCost || outsideProcessesData.totalCost || 75)).toFixed(2)}</td></tr>
             </tbody>
           </table>
           <div>
