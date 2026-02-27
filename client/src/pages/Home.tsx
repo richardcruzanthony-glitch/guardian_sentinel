@@ -204,6 +204,9 @@ export default function Home() {
       confidence: 0.92 + Math.random() * 0.06,
       data: agentData.result || agentData,
     }));
+    const basePrice = r.summary.estimatedCost || r.summary.totalPrice || 0;
+    const outsideProcessingCost = r.agentResults['Outside Processes Agent']?.result?.totalOutsideCost || 0;
+    const totalPrice = basePrice + outsideProcessingCost;
     setProcessingResult({
       ...r.summary,
       imageUrl: r.imageUrl,
@@ -213,7 +216,7 @@ export default function Home() {
       totalDuration: (r.summary.processingTime || 3.2) * 1000,
       summary: {
         ...r.summary,
-        totalPrice: r.summary.estimatedCost || r.summary.totalPrice,
+        totalPrice: totalPrice,
         leadTimeDays: r.summary.leadTimeDays,
         riskLevel: r.summary.riskLevel || 'medium',
       },
