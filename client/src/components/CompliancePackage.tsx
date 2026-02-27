@@ -40,7 +40,8 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
   // Ensure every CNC operation has a program and every operation has a stage drawing
   const cncData = useMemo(() => {
     const data = { ...rawCncData };
-    const ops = Array.isArray(data.operations) ? data.operations : [];
+    // Support both 'operations' and 'routing' field names
+    const ops = Array.isArray(data.operations) ? data.operations : Array.isArray(data.routing) ? data.routing : [];
     
     // Debug: log what the agent returned
     console.log('[CompliancePackage] CNC Agent raw data:', JSON.stringify({
@@ -51,6 +52,8 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
       stageDrawingOps: Array.isArray(data.stageDrawings) ? data.stageDrawings.map((s: any) => s.opNumber) : [],
     }));
 
+    // Ensure operations array is set
+    if (!Array.isArray(data.operations)) data.operations = ops;
     // Ensure programs array exists
     if (!Array.isArray(data.programs)) data.programs = [];
     // Ensure stageDrawings array exists  

@@ -40,3 +40,9 @@
 - [x] Add outside processing cost to final pricing calculation (anodize cost $75 now included)
 - [x] Verify pricing includes all cost components
 - [x] Test routing sheet end-to-end
+
+## CRITICAL DISPLAY ISSUES
+- [ ] Fix Shop-Floor Routing Sheet - show actual operation table instead of placeholder
+- [ ] Sync outside processing costs - RFQ shows $75 but Outside Processes shows $355 total
+- [ ] Fix CNC Programming display - show actual G-code programs expandable by operation
+- [ ] Add Stage Drawings to routing sheet - each operation needs specific stage drawing
