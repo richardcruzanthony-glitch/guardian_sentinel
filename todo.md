@@ -26,3 +26,10 @@
 - [ ] Video walkthrough of 5-axis workflow
 - [ ] Tool change notes in stage drawings
 - [ ] Operation summary card in routing sheet
+
+## Licensing Strategy Restructure
+- [x] Update licensing tiers to Right to Execute, Deterministic Shield, Digital Twin
+- [x] Update sales agent messaging to pitch speed, safety, and simulation benefits
+- [x] Create licensing comparison page with value propositions
+- [x] Add tier-specific features and unlock capabilities
+- [x] Test licensing flow end-to-end

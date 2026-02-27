@@ -382,21 +382,33 @@ Style: Technical engineering illustration, dark navy/black background, parts sho
           const { invokeLLM } = await import('./_core/llm');
           
           const systemPrompt = `You are the Guardian OS Sales Agent. Your role is to:
-1. Help prospects understand Guardian OS licensing tiers (Starter, Professional, Enterprise)
-2. Answer questions about features, pricing, and deployment across Manufacturing and Legal domains
+1. Pitch three distinct value propositions: Speed (Right to Execute), Safety (Deterministic Shield), Simulation (Digital Twin)
+2. Help prospects understand Guardian OS licensing tiers and their business impact
 3. Identify sales opportunities and capture lead information
 4. Be friendly, professional, and solution-focused
 
+Guardian OS Value Propositions:
+
+1. RIGHT TO EXECUTE (Speed License) - $1,499 Initial
+   Pitch: "Turn a complex engineering drawing into an AS9102 FAI package in 3.2 seconds"
+   Value: Recover 2-3 weeks of lost lead time (14 days back to your schedule)
+   Target: Small businesses needing fast compliance documentation
+
+2. DETERMINISTIC SHIELD (Safety License) - $5,000/Year
+   Pitch: "Insurance policy for compliance. Hardened over 12,000 cycles with 0% logic drift"
+   Value: Eliminate human error in ISO/AS9100 documentation, protect certification
+   Target: Manufacturing companies with AS9100 or ISO 13485 requirements
+
+3. DIGITAL TWIN (Simulation License) - $15,000+/Year
+   Pitch: "Digital twin of your entire value chain. Simulate cost, lead time, and compliance before spending a dollar"
+   Value: Eliminate estimation risk, optimize operations across manufacturing and legal
+   Target: Enterprise customers needing multi-domain visibility
+
 Guardian OS Domains:
-- MANUFACTURING: Automates RFQ, routing, compliance (AS9100, FAI, inspection), G-code generation, procurement
-- LEGAL: Automates contract review, compliance tracking, risk assessment, document management
+- MANUFACTURING: RFQ, routing, compliance (AS9100, FAI, inspection), G-code, procurement
+- LEGAL: Contract review, compliance tracking, risk assessment, document management
 
-Licensing Tiers:
-- Starter: $299/month - Up to 5 users, basic support, core features for 1 domain
-- Professional: $999/month - Up to 20 users, priority support, advanced features for both domains
-- Enterprise: Custom pricing - Unlimited users, dedicated support, custom integration, on-premise deployment
-
-When you identify a prospect interested in purchasing, extract their name, email, company, industry, and which domains they're interested in.`;
+When you identify a prospect, extract their name, email, company, industry, and which tier/value proposition resonates most.`;
 
           const messages = [
             { role: 'system' as const, content: systemPrompt },
@@ -413,7 +425,12 @@ When you identify a prospect interested in purchasing, extract their name, email
             : 'Thank you for your interest in Guardian OS. How can I help you today?';
 
           // Lead detection: look for intent to purchase or demo
-          const isLead = /email|contact|pricing|demo|trial|purchase|buy|license|interested|manufacturing|legal|contract|compliance|riskmanagement/i.test(input.userMessage);
+          const isLead = /email|contact|pricing|demo|trial|purchase|buy|license|interested|manufacturing|legal|contract|compliance|speed|fai|simulation|risk/i.test(input.userMessage);
+          
+          // Detect which tier resonates
+          const speedInterest = /speed|fast|quick|3.2|seconds|lead time|fai|execute/i.test(input.userMessage);
+          const safetyInterest = /safety|compliance|audit|certification|error|deterministic|shield|insurance|as9100|iso/i.test(input.userMessage);
+          const simulationInterest = /simulation|digital twin|cost|estimate|risk|planning|forecast|what.if/i.test(input.userMessage);
           
           // Extract domain interest
           const manufacturingInterest = /manufacturing|rfc|routing|compliance|as9100|fai|inspection|gcode|procurement/i.test(input.userMessage);
@@ -491,41 +508,65 @@ When you identify a prospect interested in purchasing, extract their name, email
         return [
           {
             id: 1,
-            name: 'Starter',
-            monthlyPrice: 29900,
-            annualPrice: 299900,
-            features: ['Core Guardian OS features', 'Up to 5 users', 'Email support', 'Basic integrations'],
+            name: 'Right to Execute',
+            monthlyPrice: 0,
+            annualPrice: 149900,
+            features: [
+              'Turn engineering drawings into AS9102 FAI in 3.2 seconds',
+              'Manufacturing domain access',
+              'Email support',
+              'Up to 5 users',
+              'Standard compliance templates'
+            ],
             maxUsers: 5,
             maxProjects: null,
             supportLevel: 'email',
-            description: 'Perfect for small teams getting started with Guardian OS',
+            description: 'Speed License - Recover 2-3 weeks of lost lead time. $1,499 initial investment.',
             createdAt: new Date(),
           },
           {
             id: 2,
-            name: 'Professional',
-            monthlyPrice: 99900,
-            annualPrice: 999900,
-            features: ['All Starter features', 'Up to 20 users', 'Priority support', 'Advanced integrations', 'Custom workflows'],
+            name: 'Deterministic Shield',
+            monthlyPrice: 416700,
+            annualPrice: 500000,
+            features: [
+              'Insurance policy for compliance - 0% logic drift',
+              'Manufacturing + Legal domain access',
+              'Priority support',
+              'Up to 20 users',
+              'Advanced compliance automation',
+              'Hardened over 12,000 cycles',
+              'ISO/AS9100 protection'
+            ],
             maxUsers: 20,
             maxProjects: null,
             supportLevel: 'priority',
-            description: 'For growing teams with advanced manufacturing needs',
+            description: 'Safety License - Eliminate human error in compliance. $5,000/year subscription.',
             createdAt: new Date(),
           },
           {
             id: 3,
-            name: 'Enterprise',
-            monthlyPrice: 0,
-            annualPrice: 0,
-            features: ['All Professional features', 'Unlimited users', 'Dedicated support', 'Custom integration', 'On-premise deployment', 'SLA guarantee'],
+            name: 'Digital Twin',
+            monthlyPrice: 125000,
+            annualPrice: 1500000,
+            features: [
+              'Digital twin of your entire value chain',
+              'Simulate cost, lead time, and compliance before spending',
+              'Manufacturing + Legal + Multi-domain access',
+              'Dedicated support',
+              'Unlimited users',
+              'Custom integration',
+              'Advanced simulation and forecasting',
+              'Estimation risk elimination'
+            ],
             maxUsers: null,
             maxProjects: null,
             supportLevel: 'dedicated',
-            description: 'For large enterprises with custom requirements',
+            description: 'Simulation License - Eliminate estimation risk. $15,000+/year enterprise pricing.',
             createdAt: new Date(),
           },
         ];
+
       }
     }),
   }),

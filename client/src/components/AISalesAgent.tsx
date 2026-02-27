@@ -17,7 +17,7 @@ export function AISalesAgent() {
     {
       id: '1',
       role: 'agent',
-      content: 'Hi! 👋 I\'m the Guardian OS Sales Agent. I\'m here to help you understand our licensing options and answer any questions about deploying Guardian OS in your organization. What brings you here today?',
+      content: 'Hi! 👋 I\'m the Guardian OS Sales Agent. We offer three distinct value propositions:\n\n🚀 **Right to Execute** ($1,499) - Turn engineering drawings into AS9102 FAI in 3.2 seconds\n\n🛡️ **Deterministic Shield** ($5,000/yr) - Insurance policy for compliance with 0% logic drift\n\n🤖 **Digital Twin** ($15,000+/yr) - Simulate your entire value chain before spending a dollar\n\nWhich resonates most with your needs?',
       timestamp: new Date(),
     },
   ]);
@@ -70,14 +70,18 @@ export function AISalesAgent() {
 
       // If agent detected a lead opportunity, capture it
       if (response.isLead) {
-        await createLicenseLead.mutateAsync({
-          name: response.leadInfo?.name || 'Unknown',
-          email: response.leadInfo?.email || '',
-          company: response.leadInfo?.company,
-          industry: response.leadInfo?.industry,
-          tiersInterested: response.leadInfo?.tiersInterested || [],
-          message: input,
-        });
+        try {
+          await createLicenseLead.mutateAsync({
+            name: response.leadInfo?.name || 'Prospect',
+            email: response.leadInfo?.email || 'contact@company.com',
+            company: response.leadInfo?.company || 'Unknown',
+            industry: response.leadInfo?.industry,
+            tiersInterested: response.leadInfo?.tiersInterested || [],
+            message: input,
+          });
+        } catch (leadError) {
+          console.error('Failed to create lead:', leadError);
+        }
       }
     } catch (error) {
       console.error('Error getting sales response:', error);
