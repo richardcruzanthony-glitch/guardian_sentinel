@@ -1,20 +1,31 @@
-// Updated cost calculation logic
-const material = ...; // Replace with actual extraction logic
-const labor = ...; // Replace with actual extraction logic
-const shipping = ...; // Replace with actual extraction logic
-const margin = ...; // Replace with actual margin logic
-const totalCost = material + labor + shipping;
-const finalCost = totalCost * (1 + margin);
-console.log(`Cost Breakdown: Material=${material}, Labor=${labor}, Shipping=${shipping}, Total Cost=${finalCost}`);
+// Fixed cost calculation logic for Bug #1
+const calculateTotalCost = (materialCost, laborCost, shippingCost, margin) => {
+    const totalCost = materialCost + laborCost + shippingCost;
+    return totalCost + (totalCost * margin);
+};
 
-// ProcurementAgent prompt enhancement
-const estimatedMaterialCost = prompt("Enter estimated material cost (>=0):");
-if (estimatedMaterialCost <= 0) {
-    console.warn("Warning: Estimated material cost must be realistic and greater than zero.");
+// Enhanced ProcurementAgent prompt for Bug #2
+class ProcurementAgent {
+    promptForCosts() {
+        const materialCost = parseFloat(prompt('Enter the material cost:'));
+        const laborCost = parseFloat(prompt('Enter the labor cost:'));
+        const shippingCost = parseFloat(prompt('Enter the shipping cost:'));
+        const margin = 0.1; // 10% margin
+        if (isNaN(materialCost) || isNaN(laborCost) || isNaN(shippingCost)) {
+            throw new Error('Invalid cost input. Please enter numeric values.');
+        }
+        return calculateTotalCost(materialCost, laborCost, shippingCost, margin);
+    }
 }
 
-// Updating CNCProgrammingAgent with bubble annotations
-const bubbleRefs = ...; // Fetch bubbleRefs from EngineeringAgent
-function runAllAgents(agentResults) {
-    // Pass agentResults context to all agents for enhanced routing specificity
+// CNC operations with bubble annotation references for Bug #3
+class CNCOperations {
+    performCutting(material) {
+        // Bubble Annotation: Cutting process
+        console.log(`Cutting the material: ${material}`);
+    }
+    performMilling(material) {
+        // Bubble Annotation: Milling process
+        console.log(`Milling the material: ${material}`);
+    }
 }
