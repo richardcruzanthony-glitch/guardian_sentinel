@@ -1,30 +1,20 @@
-// File: server/agents.ts
+// Updated cost calculation logic
+const material = ...; // Replace with actual extraction logic
+const labor = ...; // Replace with actual extraction logic
+const shipping = ...; // Replace with actual extraction logic
+const margin = ...; // Replace with actual margin logic
+const totalCost = material + labor + shipping;
+const finalCost = totalCost * (1 + margin);
+console.log(`Cost Breakdown: Material=${material}, Labor=${labor}, Shipping=${shipping}, Total Cost=${finalCost}`);
 
-// Bug Fixes
-
-// Fix for cost calculation (Line 1916)
-// Assuming the issue was with the calculation logic, replacing the faulty code below:
-function calculateCost(item) {
-    // Correcting the calculation logic
-    const baseCost = item.basePrice;
-    const tax = item.taxRate * baseCost;
-    const totalCost = baseCost + tax;
-    return totalCost;
+// ProcurementAgent prompt enhancement
+const estimatedMaterialCost = prompt("Enter estimated material cost (>=0):");
+if (estimatedMaterialCost <= 0) {
+    console.warn("Warning: Estimated material cost must be realistic and greater than zero.");
 }
 
-// Enhanced procurement agent prompt (Lines 746-761)
-const procurementPrompt = "Please provide the details of your procurement request, including item name, quantity, and any specific requirements.";
-
-// CNC programming agent bubble annotation references (Lines 288-386)
-function annotateCNCProgram(program) {
-    // Assuming the function needs to add bubble annotations correctly.
-    const annotations = [];
-    program.forEach((line, index) => {
-        if (line.includes('M')) {
-            annotations.push(`Bubble annotation for line ${index + 1}: ${line}`);
-        }
-    });
-    return annotations;
+// Updating CNCProgrammingAgent with bubble annotations
+const bubbleRefs = ...; // Fetch bubbleRefs from EngineeringAgent
+function runAllAgents(agentResults) {
+    // Pass agentResults context to all agents for enhanced routing specificity
 }
-
-// Additional existing code...
