@@ -141,13 +141,13 @@ export function CompliancePackage({ result, domain }: CompliancePackageProps) {
               </tr>
             </thead>
             <tbody>
-              <tr><td className="border border-border p-2">Material Cost</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.3).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Labor Cost</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.4).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Overhead</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.15).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Quality / Compliance</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.1).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Outside Processing (Anodize)</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.outsideProcessCost || 75).toFixed(2)}</td></tr>
-              <tr><td className="border border-border p-2">Shipping & Packaging</td><td className="border border-border p-2 text-right">${((result.summary?.totalPrice || salesData.quotedPrice || 0) * 0.05).toFixed(2)}</td></tr>
-              <tr className="font-bold bg-accent/10"><td className="border border-border p-2">TOTAL QUOTED PRICE (incl. Outside Processing)</td><td className="border border-border p-2 text-right text-accent">${((result.summary?.totalPrice || salesData.quotedPrice || 0) + (outsideProcessesData.totalOutsideCost || outsideProcessesData.totalCost || 75)).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Material Cost</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.materialCost || 0).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Labor Cost</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.laborCost || 0).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Overhead</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.overheadCost || 0).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Quality / Compliance</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.qualityCost || 0).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Outside Processing</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.outsideProcessCost || 0).toFixed(2)}</td></tr>
+              <tr><td className="border border-border p-2">Shipping & Packaging</td><td className="border border-border p-2 text-right">${(salesData.quoteBreakdown?.shippingCost || 0).toFixed(2)}</td></tr>
+              <tr className="font-bold bg-accent/10"><td className="border border-border p-2">TOTAL QUOTED PRICE</td><td className="border border-border p-2 text-right text-accent">${(salesData.quoteBreakdown?.totalCost || result.summary?.totalPrice || 0).toFixed(2)}</td></tr>
             </tbody>
           </table>
           <div>
